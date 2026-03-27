@@ -8,18 +8,17 @@ import ExpandMore from "@mui/icons-material/ExpandMore";
 import { AppColors } from "../../constant/appColors";
 import { protectedRouters } from "../../router/router.config";
 import { protectedRouters2 } from "../../router/router.config";
-import useAuth from "../../hooks/useAuth";
+import { useSelector } from "react-redux";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const theme = useTheme();
   const location = useLocation();
   const [controlCenterOpen, setControlCenterOpen] = useState(false);
 
-  const { isSecondGame } = useAuth();
+  const { isSecondGame } = useSelector((state) => state.userAuth);
 
   const asideItems = isSecondGame ? protectedRouters2 : protectedRouters;
   const menuItems = asideItems?.filter((item) => item?.inSidebarMenu) ?? [];
-  const groupHeaders = menuItems.filter((i) => !i.path);
   const linkItems = menuItems.filter((i) => i.path);
 
   const drawerContent = (

@@ -1,6 +1,6 @@
 import api from "../utils/axios";
 
-const BASE_URL = '/trade/admin';
+const BASE_URL = "/trade/admin";
 
 const tradeService = {
   getDashboard: async () => {
@@ -18,8 +18,18 @@ const tradeService = {
     return response.data;
   },
 
+  updateUserEmail: async (userId, email) => {
+    const response = await api.patch(`${BASE_URL}/users/${userId}/email`, {
+      email,
+    });
+    return response.data;
+  },
+
   updateUserStatus: async (userId, status) => {
-    const response = await api.patch(`${BASE_URL}/users/${userId}/status`, status);
+    const response = await api.patch(
+      `${BASE_URL}/users/${userId}/status`,
+      status,
+    );
     return response.data;
   },
 
@@ -40,12 +50,14 @@ const tradeService = {
   },
 
   getWithdrawalsHistory: async (params = {}) => {
-    const response = await api.get(`${BASE_URL}/withdrawals/history`, { params });
+    const response = await api.get(`${BASE_URL}/withdrawals/history`, {
+      params,
+    });
     return response.data;
   },
   getAddressBalance: async (address, chain) => {
     const response = await api.get(`${BASE_URL}/address/balance`, {
-      params: { address, chain }
+      params: { address, chain },
     });
     return response.data;
   },
@@ -53,7 +65,7 @@ const tradeService = {
   // Get all deposit balances for a specific chain
   getChainBalances: async (chain) => {
     const response = await api.get(`${BASE_URL}/funds/chain/balances`, {
-      params: { chain }
+      params: { chain },
     });
     return response.data;
   },
@@ -63,7 +75,7 @@ const tradeService = {
     const response = await api.post(`${BASE_URL}/sweep/address`, {
       address,
       chain,
-      toAddress
+      toAddress,
     });
     return response.data;
   },
@@ -72,7 +84,7 @@ const tradeService = {
   sweepAllFunds: async (chain, toAddress) => {
     const response = await api.post(`${BASE_URL}/sweep/all`, {
       chain,
-      toAddress
+      toAddress,
     });
     return response.data;
   },
@@ -80,7 +92,7 @@ const tradeService = {
   // Check if an address can be swept
   checkSweepEligibility: async (address, chain) => {
     const response = await api.get(`${BASE_URL}/check/sweep`, {
-      params: { address, chain }
+      params: { address, chain },
     });
     return response.data;
   },
@@ -136,6 +148,10 @@ const tradeService = {
   },
   getUserStats: async () => {
     const response = await api.get(`/trade/getUserStats`);
+    return response.data;
+  },
+  giveSalary: async (body) => {
+    const response = await api.post(`${BASE_URL}/salary/give`, body);
     return response.data;
   },
 };

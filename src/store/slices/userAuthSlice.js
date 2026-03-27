@@ -2,9 +2,9 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   userData: null,
-  userData2: null,
   token: null,
   token2: null,
+  isSecondGame: localStorage.getItem('isSecondGame') ? JSON.parse(localStorage.getItem('isSecondGame')) : false,
 };
 
 const userAuthSlice = createSlice({
@@ -13,20 +13,22 @@ const userAuthSlice = createSlice({
   reducers: {
     clearUser: (state) => {
       state.userData = null;
-      state.userData2 = null;
       state.token = null;
       state.token2 = null;
+      state.isSecondGame = false;
+      localStorage.removeItem('isSecondGame');
     },
     setUserData: (state, action) => {
       state.userData = action.payload.userData;
       state.token = action.payload.token;
-    },
-    setUserData2: (state, action) => {
-      state.userData2 = action.payload.userData2;
       state.token2 = action.payload.token2;
+    },
+    setIsSecondGame: (state, action) => {
+      state.isSecondGame = action.payload;
+      localStorage.setItem('isSecondGame', JSON.stringify(action.payload));
     },
   },
 });
 
-export const { clearUser, setUserData, setUserData2 } = userAuthSlice.actions;
+export const { clearUser, setUserData, setIsSecondGame } = userAuthSlice.actions;
 export default userAuthSlice.reducer;

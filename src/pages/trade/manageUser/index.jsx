@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Paper,
@@ -28,7 +28,7 @@ import {
   Stack,
   Tooltip,
   CircularProgress,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Search,
   Visibility,
@@ -43,11 +43,16 @@ import {
   Restore,
   AccountBalanceWallet,
   Update,
-} from '@mui/icons-material';
-import { AppColors } from '../../../constant/appColors';
-import useSnackbar from '../../../hooks/useSnackbar';
-import tradeService from '../../../services/tradeService';
-import BTLoader from '../../../components/Loader';
+  Paid,
+  Edit,
+} from "@mui/icons-material";
+import { AppColors } from "../../../constant/appColors";
+import useSnackbar from "../../../hooks/useSnackbar";
+import tradeService from "../../../services/tradeService";
+import BTLoader from "../../../components/Loader";
+import DatePicker from "../../../components/input/datePicker";
+import { FONT_SIZE } from "../../../constant/lookUpConstant";
+import networkService from "../../../services/networkService";
 
 const ManageUsers = () => {
   const { showSnackbar } = useSnackbar();
@@ -60,14 +65,13 @@ const ManageUsers = () => {
   const [totalUsers, setTotalUsers] = useState(0);
 
   // Filter state
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('createdAt');
-  const [sortOrder, setSortOrder] = useState('desc');
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
 
   // Modal state
-  const [selectedUser, setSelectedUser] = useState(null);
   const [userDetails, setUserDetails] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
@@ -75,19 +79,38 @@ const ManageUsers = () => {
   // Action state
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Update email (inline in details modal)
+  const [emailEditMode, setEmailEditMode] = useState(false);
+  const [emailDraft, setEmailDraft] = useState("");
+  const [emailSubmitting, setEmailSubmitting] = useState(false);
+
   // Dummy Deposit modal
   const [dummyDepositOpen, setDummyDepositOpen] = useState(false);
   const [dummyDepositSubmitting, setDummyDepositSubmitting] = useState(false);
-  const [dummyForm, setDummyForm] = useState({ UID: '', amount: '', note: '' });
+  const [dummyForm, setDummyForm] = useState({ UID: "", amount: "", note: "" });
   const [dummyFormError, setDummyFormError] = useState(null);
+
+  // Give Salary modal
+  const [salaryOpen, setSalaryOpen] = useState(false);
+  const [salarySubmitting, setSalarySubmitting] = useState(false);
+  const [salaryForm, setSalaryForm] = useState({
+    UID: "",
+    salaryAmount: "",
+    date: new Date().toISOString().slice(0, 10), // YYYY-MM-DD
+    note: "",
+  });
+  const [salaryFormError, setSalaryFormError] = useState(null);
 
   const [openUserStatsModal, setOpenUserStatsModal] = useState(false);
   const [userStatsSubmitting, setUserStatsSubmitting] = useState(false);
-  const [userStatsForm, setUserStatsForm] = useState({ totalUsers: 0, newUsers: 0 });
+  const [userStatsForm, setUserStatsForm] = useState({
+    totalUsers: 0,
+    newUsers: 0,
+  });
   const [userStatsFormError, setUserStatsFormError] = useState(null);
 
   // Fetch users
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -99,16 +122,19 @@ const ManageUsers = () => {
       };
 
       // Add status filters
-      if (statusFilter === 'blocked') {
+      if (statusFilter === "blocked") {
         params.isBlocked = true;
-      } else if (statusFilter === 'deleted') {
+      } else if (statusFilter === "deleted") {
         params.isDeleted = true;
-      } else if (statusFilter === 'active') {
+      } else if (statusFilter === "active") {
         params.isBlocked = false;
         params.isDeleted = false;
       }
 
-      const [response, userStatsResponse] = await Promise.all([tradeService.getUsers(params), tradeService.getUserStats()]);
+      const [response, userStatsResponse] = await Promise.all([
+        tradeService.getUsers(params),
+        tradeService.getUserStats(),
+      ]);
       if (response.success) {
         setUsers(response.data || []);
         setTotalUsers(response.pagination?.total || 0);
@@ -117,15 +143,23 @@ const ManageUsers = () => {
           newUsers: userStatsResponse.data.newUsers || 0,
         });
       } else {
-        showSnackbar('Failed to fetch users', 'error');
+        showSnackbar("Failed to fetch users", "error");
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
-      showSnackbar('Error fetching users', 'error');
+      console.error("Error fetching users:", error);
+      showSnackbar("Error fetching users", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    page,
+    rowsPerPage,
+    debouncedSearch,
+    statusFilter,
+    sortBy,
+    sortOrder,
+    showSnackbar,
+  ]);
 
   // Fetch user details
   const fetchUserDetails = async (userId, userUID) => {
@@ -139,38 +173,49 @@ const ManageUsers = () => {
         const userData = response.data.user || response.data;
         setUserDetails(userData);
       } else {
-        showSnackbar('Failed to fetch user details', 'error');
+        showSnackbar("Failed to fetch user details", "error");
       }
     } catch (error) {
-      console.error('Error fetching user details:', error);
-      showSnackbar('Error fetching user details', 'error');
+      console.error("Error fetching user details:", error);
+      showSnackbar("Error fetching user details", "error");
     } finally {
       setModalLoading(false);
     }
   };
 
   // Update user status
-  const updateUserStatus = async (userId, updates) => {
+  const updateUserStatus = async (UID, updates) => {
     try {
       setActionLoading(true);
-      const response = await tradeService.updateUserStatus(userId, updates);
+      const [tradeResponse, networkResponse] = await Promise.all([
+        tradeService.updateUserStatus(UID, updates),
+        networkService.blockUnblockUser(UID, {
+          isBlocked: updates.isBlocked,
+          reason: undefined,
+        }),
+      ]);
 
-      if (response.success) {
-        showSnackbar('User status updated successfully', 'success');
+      if (tradeResponse.success && networkResponse.success) {
+        showSnackbar(
+          tradeResponse.message ||
+            networkResponse.message ||
+            "User status updated successfully",
+          "success",
+        );
         fetchUsers(); // Refresh the list
-        if (userDetails && userDetails._id === userId) {
+        if (userDetails && userDetails.UID === UID) {
           // Update user details in modal
           setUserDetails({
             ...userDetails,
-            ...updates
+            ...updates,
           });
         }
       } else {
-        showSnackbar('Failed to update user status', 'error');
+        showSnackbar("Failed to update user status", "error");
       }
     } catch (error) {
-      console.error('Error updating user status:', error);
-      showSnackbar('Error updating user status', 'error');
+      console.error("Error updating user status:", error);
+      showSnackbar("Error updating user status", "error");
     } finally {
       setActionLoading(false);
     }
@@ -178,7 +223,6 @@ const ManageUsers = () => {
 
   // Handle view user details
   const handleViewUser = (user) => {
-    setSelectedUser(user);
     setModalOpen(true);
     fetchUserDetails(user._id, user.UID);
   };
@@ -186,40 +230,130 @@ const ManageUsers = () => {
   // Handle modal close
   const handleModalClose = () => {
     setModalOpen(false);
-    setSelectedUser(null);
     setUserDetails(null);
+    setEmailEditMode(false);
+    setEmailDraft("");
+  };
+
+  const handleStartEditEmail = () => {
+    if (!userDetails?._id) return;
+    setEmailDraft((userDetails.email || "").trim());
+    setEmailEditMode(true);
+  };
+
+  const handleCancelEditEmail = () => {
+    setEmailEditMode(false);
+    setEmailDraft("");
+  };
+
+  const handleSaveEmail = async () => {
+    if (!userDetails?._id) return;
+    const nextEmail = (emailDraft || "").trim();
+    const currentEmail = (userDetails.email || "").trim();
+
+    if (!nextEmail) {
+      showSnackbar("Email is required", "error");
+      return;
+    }
+    // basic email validation; backend remains source of truth
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail)) {
+      showSnackbar("Please enter a valid email address", "error");
+      return;
+    }
+    if (nextEmail.toLowerCase() === currentEmail.toLowerCase()) {
+      setEmailEditMode(false);
+      setEmailDraft("");
+      return;
+    }
+
+    try {
+      setEmailSubmitting(true);
+      const [tradeResponse, networkResponse] = await Promise.all([
+        tradeService.updateUserEmail(userDetails.UID, nextEmail),
+        networkService.updateUserEmail(userDetails.UID, nextEmail),
+      ]);
+      if (tradeResponse?.success && networkResponse?.success) {
+        showSnackbar(
+          tradeResponse?.message ||
+            networkResponse?.message ||
+            "Email updated successfully",
+          "success",
+        );
+        setUserDetails((p) =>
+          p
+            ? {
+                ...p,
+                email: nextEmail,
+                isEmailVerified: false,
+              }
+            : p,
+        );
+        setEmailEditMode(false);
+        setEmailDraft("");
+        fetchUsers();
+      } else {
+        showSnackbar(
+          tradeResponse?.message ||
+            networkResponse?.message ||
+            "Failed to update email",
+          "error",
+        );
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || "Failed to update email";
+      showSnackbar(msg, "error");
+    } finally {
+      setEmailSubmitting(false);
+    }
   };
 
   // Dummy Deposit: open modal (optionally with user to pre-fill UID)
   const handleOpenDummyDeposit = (user = null) => {
     setDummyFormError(null);
     setDummyForm({
-      UID: user?.UID ?? '',
-      amount: '',
-      note: '',
+      UID: user?.UID ?? "",
+      amount: "",
+      note: "",
     });
     setDummyDepositOpen(true);
   };
 
+  // Give Salary: open modal (optionally with user to pre-fill UID)
+  const handleOpenSalary = (user = null) => {
+    setSalaryFormError(null);
+    setSalaryForm({
+      UID: user?.UID ?? "",
+      salaryAmount: "",
+      date: new Date().toISOString().slice(0, 10),
+      note: "",
+    });
+    setSalaryOpen(true);
+  };
+
   const handleCloseDummyDeposit = () => {
     setDummyDepositOpen(false);
-    setDummyForm({ UID: '', amount: '', note: '' });
+    setDummyForm({ UID: "", amount: "", note: "" });
     setDummyFormError(null);
+  };
+
+  const handleCloseSalary = () => {
+    setSalaryOpen(false);
+    setSalaryFormError(null);
   };
 
   const handleDummyDepositSubmit = async (e) => {
     e.preventDefault();
     setDummyFormError(null);
-    const UID = (dummyForm.UID || '').trim();
+    const UID = (dummyForm.UID || "").trim();
     const amount = parseFloat(dummyForm.amount);
-    const note = (dummyForm.note || '').trim();
+    const note = (dummyForm.note || "").trim();
 
     if (!UID) {
-      setDummyFormError('User UID is required');
+      setDummyFormError("User UID is required");
       return;
     }
     if (Number.isNaN(amount) || amount <= 0) {
-      setDummyFormError('Amount must be a positive number');
+      setDummyFormError("Amount must be a positive number");
       return;
     }
 
@@ -231,19 +365,81 @@ const ManageUsers = () => {
         note: note || undefined,
       });
       if (response?.success) {
-        showSnackbar(response.message || 'Dummy deposit created successfully', 'success');
+        showSnackbar(
+          response.message || "Dummy deposit created successfully",
+          "success",
+        );
         handleCloseDummyDeposit();
         fetchUsers(); // refresh list in case balances are shown
       } else {
-        setDummyFormError(response?.message || 'Failed to create dummy deposit');
-        showSnackbar(response?.message || 'Failed to create dummy deposit', 'error');
+        setDummyFormError(
+          response?.message || "Failed to create dummy deposit",
+        );
+        showSnackbar(
+          response?.message || "Failed to create dummy deposit",
+          "error",
+        );
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to create dummy deposit';
+      const msg =
+        err.response?.data?.message || "Failed to create dummy deposit";
       setDummyFormError(msg);
-      showSnackbar(msg, 'error');
+      showSnackbar(msg, "error");
     } finally {
       setDummyDepositSubmitting(false);
+    }
+  };
+
+  const handleSalarySubmit = async (e) => {
+    e.preventDefault();
+    setSalaryFormError(null);
+
+    const UID = (salaryForm.UID || "").trim();
+    const salaryAmount = parseFloat(salaryForm.salaryAmount);
+    const date = (salaryForm.date || "").trim();
+    const note = (salaryForm.note || "").trim();
+
+    if (!UID) {
+      setSalaryFormError("User UID is required");
+      return;
+    }
+    if (Number.isNaN(salaryAmount) || salaryAmount <= 0) {
+      setSalaryFormError("Salary amount must be a positive number");
+      return;
+    }
+    // Basic format validation; backend should still validate.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      setSalaryFormError("Date must be in YYYY-MM-DD format");
+      return;
+    }
+
+    try {
+      setSalarySubmitting(true);
+      const response = await tradeService.giveSalary({
+        UID,
+        salaryAmount: Number(salaryAmount),
+        date,
+        note: note || undefined,
+      });
+
+      if (response?.success) {
+        showSnackbar(
+          response.message || "Salary given successfully",
+          "success",
+        );
+        handleCloseSalary();
+        fetchUsers();
+      } else {
+        const msg = response?.message || "Failed to give salary";
+        setSalaryFormError(msg);
+        showSnackbar(msg, "error");
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.message || "Failed to give salary";
+      setSalaryFormError(msg);
+      showSnackbar(msg, "error");
+    } finally {
+      setSalarySubmitting(false);
     }
   };
 
@@ -265,19 +461,19 @@ const ManageUsers = () => {
     const newU = parseInt(userStatsForm.newUsers) || 0;
 
     if (total === 0) {
-      setUserStatsFormError('Total users is required');
+      setUserStatsFormError("Total users is required");
       return;
     }
     if (Number.isNaN(total) || total < 0) {
-      setUserStatsFormError('Total users must be a non-negative integer');
+      setUserStatsFormError("Total users must be a non-negative integer");
       return;
     }
     if (newU === 0 || newU === null) {
-      setUserStatsFormError('New users is required');
+      setUserStatsFormError("New users is required");
       return;
     }
     if (Number.isNaN(newU) || newU < 0) {
-      setUserStatsFormError('New users must be a non-negative integer');
+      setUserStatsFormError("New users must be a non-negative integer");
       return;
     }
 
@@ -288,17 +484,28 @@ const ManageUsers = () => {
         newUsers: newU,
       });
       if (response?.success) {
-        showSnackbar(response.message || 'User stats updated successfully', 'success');
+        showSnackbar(
+          response.message || "User stats updated successfully",
+          "success",
+        );
         handleCloseUserStatsModal();
         fetchUsers();
       } else {
-        setUserStatsFormError(response?.message || 'Failed to update user stats');
-        showSnackbar(response?.message || 'Failed to update user stats', 'error');
+        setUserStatsFormError(
+          response?.message || "Failed to update user stats",
+        );
+        showSnackbar(
+          response?.message || "Failed to update user stats",
+          "error",
+        );
       }
     } catch (err) {
-      const msg = err?.message || err?.response?.data?.message || 'Failed to update user stats';
+      const msg =
+        err?.message ||
+        err?.response?.data?.message ||
+        "Failed to update user stats";
       setUserStatsFormError(msg);
-      showSnackbar(msg, 'error');
+      showSnackbar(msg, "error");
     } finally {
       setUserStatsSubmitting(false);
     }
@@ -319,11 +526,11 @@ const ManageUsers = () => {
   const handleSort = (column) => {
     if (sortBy === column) {
       // Toggle sort order if clicking the same column
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
       // Set new column and default to ascending
       setSortBy(column);
-      setSortOrder('asc');
+      setSortOrder("asc");
     }
     setPage(0); // Reset to first page when sorting changes
   };
@@ -333,7 +540,7 @@ const ManageUsers = () => {
     if (sortBy !== column) {
       return <Sort sx={{ fontSize: 16, opacity: 0.3 }} />;
     }
-    return sortOrder === 'asc' ? (
+    return sortOrder === "asc" ? (
       <ArrowUpward sx={{ fontSize: 16, color: AppColors.GOLD_DARK }} />
     ) : (
       <ArrowDownward sx={{ fontSize: 16, color: AppColors.GOLD_DARK }} />
@@ -373,7 +580,9 @@ const ManageUsers = () => {
         label={user.isEmailVerified ? "Active" : "Unverified"}
         size="small"
         sx={{
-          bgcolor: user.isEmailVerified ? `${AppColors.SUCCESS}20` : `${AppColors.ERROR}15`,
+          bgcolor: user.isEmailVerified
+            ? `${AppColors.SUCCESS}20`
+            : `${AppColors.ERROR}15`,
           color: user.isEmailVerified ? AppColors.SUCCESS : AppColors.ERROR,
           fontWeight: 600,
         }}
@@ -395,7 +604,7 @@ const ManageUsers = () => {
   // Effects
   useEffect(() => {
     fetchUsers();
-  }, [page, rowsPerPage, debouncedSearch, statusFilter, sortBy, sortOrder]);
+  }, [fetchUsers]);
 
   return (
     <Box>
@@ -403,10 +612,10 @@ const ManageUsers = () => {
       <Box
         sx={{
           mb: { xs: 1, md: 2 },
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
           gap: 2,
         }}
       >
@@ -417,14 +626,17 @@ const ManageUsers = () => {
               fontWeight: 700,
               color: AppColors.TXT_MAIN,
               background: `linear-gradient(45deg, ${AppColors.GOLD_DARK}, ${AppColors.GOLD_LIGHT})`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
+              backgroundClip: "text",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
             }}
           >
             Manage Users
           </Typography>
-          <Typography variant="body2" sx={{ color: AppColors.TXT_SUB, mt: 0.5 }}>
+          <Typography
+            variant="body2"
+            sx={{ color: AppColors.TXT_SUB, mt: 0.5 }}
+          >
             View and manage user accounts
           </Typography>
         </Box>
@@ -437,7 +649,7 @@ const ManageUsers = () => {
             Update User Stats
           </Button>
           <Button
-            className='btn-primary'
+            className="btn-primary"
             startIcon={<AccountBalanceWallet />}
             onClick={() => handleOpenDummyDeposit()}
           >
@@ -471,9 +683,9 @@ const ManageUsers = () => {
                 sx: {
                   backgroundColor: AppColors.BG_SECONDARY,
                   borderRadius: 2,
-                  '& fieldset': { border: 'none' },
-                  '& input': { color: AppColors.TXT_MAIN },
-                  '& input::placeholder': { color: AppColors.TXT_SUB },
+                  "& fieldset": { border: "none" },
+                  "& input": { color: AppColors.TXT_MAIN },
+                  "& input::placeholder": { color: AppColors.TXT_SUB },
                 },
               }}
               size="small"
@@ -490,8 +702,8 @@ const ManageUsers = () => {
                 label="Status"
                 sx={{
                   backgroundColor: AppColors.BG_SECONDARY,
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                  '& .MuiSelect-select': { color: AppColors.TXT_MAIN },
+                  "& .MuiOutlinedInput-notchedOutline": { border: "none" },
+                  "& .MuiSelect-select": { color: AppColors.TXT_MAIN },
                 }}
               >
                 <MenuItem value="all">All Users</MenuItem>
@@ -504,91 +716,106 @@ const ManageUsers = () => {
         </Grid>
         <Box sx={{ mt: { xs: 1, md: 1.5 } }}>
           <TableContainer>
-            <Table sx={{
-              "& .MuiTableCell-root": {
-                p: { xs: 1, md: 1.5 },
-              },
-              "& .MuiTableCell-head": {
-                p: { xs: 1, md: 1.5 },
-              },
-              "& .MuiTableCell-body": {
-                p: { xs: 1, md: 1.5 },
-              },
-            }}>
+            <Table
+              sx={{
+                "& .MuiTableCell-root": {
+                  p: { xs: 1, md: 1.5 },
+                },
+                "& .MuiTableCell-head": {
+                  p: { xs: 1, md: 1.5 },
+                },
+                "& .MuiTableCell-body": {
+                  p: { xs: 1, md: 1.5 },
+                },
+              }}
+            >
               <TableHead>
                 <TableRow sx={{ backgroundColor: AppColors.BG_SECONDARY }}>
                   <TableCell
                     sx={{
                       color: AppColors.TXT_MAIN,
                       fontWeight: 600,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      '&:hover': {
+                      cursor: "pointer",
+                      userSelect: "none",
+                      "&:hover": {
                         backgroundColor: `${AppColors.GOLD_DARK}10`,
                       },
                     }}
-                    onClick={() => handleSort('fullName')}
+                    onClick={() => handleSort("fullName")}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
                       Full Name
-                      {getSortIcon('fullName')}
+                      {getSortIcon("fullName")}
                     </Box>
                   </TableCell>
                   <TableCell
                     sx={{
                       color: AppColors.TXT_MAIN,
                       fontWeight: 600,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      '&:hover': {
+                      cursor: "pointer",
+                      userSelect: "none",
+                      "&:hover": {
                         backgroundColor: `${AppColors.GOLD_DARK}10`,
                       },
                     }}
-                    onClick={() => handleSort('email')}
+                    onClick={() => handleSort("email")}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
                       Email
-                      {getSortIcon('email')}
+                      {getSortIcon("email")}
                     </Box>
                   </TableCell>
                   <TableCell
                     sx={{
                       color: AppColors.TXT_MAIN,
                       fontWeight: 600,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      '&:hover': {
+                      cursor: "pointer",
+                      userSelect: "none",
+                      "&:hover": {
                         backgroundColor: `${AppColors.GOLD_DARK}10`,
                       },
                     }}
-                    onClick={() => handleSort('UID')}
+                    onClick={() => handleSort("UID")}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
                       UID
-                      {getSortIcon('UID')}
+                      {getSortIcon("UID")}
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 600 }}>
+                  <TableCell
+                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 600 }}
+                  >
                     Status
                   </TableCell>
                   <TableCell
                     sx={{
                       color: AppColors.TXT_MAIN,
                       fontWeight: 600,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      '&:hover': {
+                      cursor: "pointer",
+                      userSelect: "none",
+                      "&:hover": {
                         backgroundColor: `${AppColors.GOLD_DARK}10`,
                       },
                     }}
-                    onClick={() => handleSort('createdAt')}
+                    onClick={() => handleSort("createdAt")}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                    >
                       Created
-                      {getSortIcon('createdAt')}
+                      {getSortIcon("createdAt")}
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 600 }} align="center">
+                  <TableCell
+                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 600 }}
+                    align="center"
+                  >
                     Actions
                   </TableCell>
                 </TableRow>
@@ -596,13 +823,21 @@ const ManageUsers = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: { xs: 1, md: 1.5 } }}>
+                    <TableCell
+                      colSpan={6}
+                      align="center"
+                      sx={{ py: { xs: 1, md: 1.5 } }}
+                    >
                       <BTLoader />
                     </TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center" sx={{ py: { xs: 1, md: 1.5 }, color: AppColors.TXT_SUB }}>
+                    <TableCell
+                      colSpan={6}
+                      align="center"
+                      sx={{ py: { xs: 1, md: 1.5 }, color: AppColors.TXT_SUB }}
+                    >
                       No users found
                     </TableCell>
                   </TableRow>
@@ -612,13 +847,15 @@ const ManageUsers = () => {
                       key={user._id}
                       hover
                       sx={{
-                        '&:hover': {
+                        "&:hover": {
                           backgroundColor: `${AppColors.GOLD_DARK}05`,
                         },
                       }}
                     >
                       <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                        >
                           <Avatar
                             sx={{
                               bgcolor: AppColors.GOLD_DARK,
@@ -626,14 +863,18 @@ const ManageUsers = () => {
                               height: { xs: 25, md: 30 },
                             }}
                           >
-                            {(user.fullName || user.email)?.[0]?.toUpperCase() || 'U'}
+                            {(user.fullName ||
+                              user.email)?.[0]?.toUpperCase() || "U"}
                           </Avatar>
                           <Box>
                             <Typography
                               variant="body2"
-                              sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}
+                              sx={{
+                                color: AppColors.TXT_MAIN,
+                                fontWeight: 500,
+                              }}
                             >
-                              {user.fullName || 'No Name'}
+                              {user.fullName || "No Name"}
                             </Typography>
                           </Box>
                         </Box>
@@ -649,33 +890,57 @@ const ManageUsers = () => {
                       <TableCell>
                         <Typography
                           variant="body2"
-                          sx={{ color: AppColors.GOLD_DARK, fontFamily: 'monospace', fontWeight: 600 }}
+                          sx={{
+                            color: AppColors.GOLD_DARK,
+                            fontFamily: "monospace",
+                            fontWeight: 600,
+                          }}
                         >
                           {user.UID}
                         </Typography>
                       </TableCell>
+                      <TableCell>{getStatusChip(user)}</TableCell>
                       <TableCell>
-                        {getStatusChip(user)}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: AppColors.TXT_SUB }}
+                        >
                           {new Date(user.createdAt).toLocaleDateString()}
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
-                        <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap">
-                          <Tooltip title="View Details">
+                        <Stack
+                          direction="row"
+                          spacing={0.5}
+                          justifyContent="center"
+                          flexWrap="wrap"
+                        >
+                          <Tooltip title="View and edit Details">
                             <IconButton
                               size="small"
                               onClick={() => handleViewUser(user)}
                               sx={{
                                 color: AppColors.GOLD_DARK,
-                                '&:hover': {
+                                "&:hover": {
                                   backgroundColor: `${AppColors.GOLD_DARK}20`,
                                 },
                               }}
                             >
                               <Visibility fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Give Salary">
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenSalary(user)}
+                              sx={{
+                                color: AppColors.GOLD_DARK,
+                                "&:hover": {
+                                  backgroundColor: `${AppColors.GOLD_DARK}20`,
+                                },
+                              }}
+                            >
+                              <Paid fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Dummy Deposit">
@@ -684,7 +949,7 @@ const ManageUsers = () => {
                               onClick={() => handleOpenDummyDeposit(user)}
                               sx={{
                                 color: AppColors.GOLD_DARK,
-                                '&:hover': {
+                                "&:hover": {
                                   backgroundColor: `${AppColors.GOLD_DARK}20`,
                                 },
                               }}
@@ -713,13 +978,13 @@ const ManageUsers = () => {
             sx={{
               borderTop: `1px solid ${AppColors.BG_SECONDARY}`,
               backgroundColor: AppColors.BG_CARD,
-              '& .MuiTablePagination-toolbar': {
+              "& .MuiTablePagination-toolbar": {
                 color: AppColors.TXT_MAIN,
               },
-              '& .MuiTablePagination-select': {
+              "& .MuiTablePagination-select": {
                 color: AppColors.TXT_MAIN,
               },
-              '& .MuiTablePagination-actions button': {
+              "& .MuiTablePagination-actions button": {
                 color: AppColors.GOLD_DARK,
               },
             }}
@@ -732,9 +997,9 @@ const ManageUsers = () => {
         open={modalOpen}
         onClose={handleModalClose}
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           p: { xs: 1, md: 1.5 },
         }}
       >
@@ -743,16 +1008,22 @@ const ManageUsers = () => {
             backgroundColor: AppColors.BG_CARD,
             border: `1px solid ${AppColors.BG_SECONDARY}`,
             borderRadius: 3,
-            maxWidth: { xs: '100%', md: 800 },
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+            maxWidth: { xs: "100%", md: 800 },
+            width: "100%",
+            maxHeight: "90vh",
+            overflow: "auto",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
           }}
         >
           <CardContent sx={{ p: { xs: 1, md: 1.5 } }}>
             {/* Modal MainHeader */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <Typography
                 variant="h6"
                 sx={{
@@ -766,7 +1037,7 @@ const ManageUsers = () => {
                 onClick={handleModalClose}
                 sx={{
                   color: AppColors.TXT_SUB,
-                  '&:hover': {
+                  "&:hover": {
                     backgroundColor: `${AppColors.ERROR}20`,
                     color: AppColors.ERROR,
                   },
@@ -777,7 +1048,7 @@ const ManageUsers = () => {
             </Box>
 
             {modalLoading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
                 <BTLoader />
               </Box>
             ) : userDetails ? (
@@ -786,7 +1057,11 @@ const ManageUsers = () => {
                 <Box sx={{ mb: { xs: 1, md: 1.5 } }}>
                   <Typography
                     variant="subtitle1"
-                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 600, mb: { xs: 1, md: 1.5 } }}
+                    sx={{
+                      color: AppColors.TXT_MAIN,
+                      fontWeight: 600,
+                      mb: { xs: 1, md: 1.5 },
+                    }}
                   >
                     Basic Information
                   </Typography>
@@ -794,15 +1069,23 @@ const ManageUsers = () => {
                     <Grid size={{ xs: 12, sm: 6 }}>
                       <UserInfoItem
                         label="Name"
-                        value={userDetails.fullName || 'Not provided'}
+                        value={userDetails.fullName || "Not provided"}
                         icon={<Person />}
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
-                      <UserInfoItem
+                      <UserEmailItem
                         label="Email"
                         value={userDetails.email}
                         icon={<Person />}
+                        editable
+                        editing={emailEditMode}
+                        draft={emailDraft}
+                        onEdit={handleStartEditEmail}
+                        onDraftChange={setEmailDraft}
+                        onCancel={handleCancelEditEmail}
+                        onSave={handleSaveEmail}
+                        saving={emailSubmitting}
                       />
                     </Grid>
                     <Grid size={{ xs: 12, sm: 6 }}>
@@ -826,8 +1109,12 @@ const ManageUsers = () => {
                             label={userDetails.isEmailVerified ? "Yes" : "No"}
                             size="small"
                             sx={{
-                              bgcolor: userDetails.isEmailVerified ? `${AppColors.SUCCESS}20` : `${AppColors.ERROR}20`,
-                              color: userDetails.isEmailVerified ? AppColors.SUCCESS : AppColors.ERROR,
+                              bgcolor: userDetails.isEmailVerified
+                                ? `${AppColors.SUCCESS}20`
+                                : `${AppColors.ERROR}20`,
+                              color: userDetails.isEmailVerified
+                                ? AppColors.SUCCESS
+                                : AppColors.ERROR,
                               fontWeight: 600,
                             }}
                           />
@@ -842,8 +1129,12 @@ const ManageUsers = () => {
                             label={userDetails.twoFactorEnabled ? "Yes" : "No"}
                             size="small"
                             sx={{
-                              bgcolor: userDetails.twoFactorEnabled ? `${AppColors.SUCCESS}20` : `${AppColors.ERROR}20`,
-                              color: userDetails.twoFactorEnabled ? AppColors.SUCCESS : AppColors.ERROR,
+                              bgcolor: userDetails.twoFactorEnabled
+                                ? `${AppColors.SUCCESS}20`
+                                : `${AppColors.ERROR}20`,
+                              color: userDetails.twoFactorEnabled
+                                ? AppColors.SUCCESS
+                                : AppColors.ERROR,
                               fontWeight: 600,
                             }}
                           />
@@ -857,7 +1148,11 @@ const ManageUsers = () => {
                 <Box sx={{ mb: { xs: 1, md: 1.5 } }}>
                   <Typography
                     variant="subtitle1"
-                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 600, mb: { xs: 1, md: 1.5 } }}
+                    sx={{
+                      color: AppColors.TXT_MAIN,
+                      fontWeight: 600,
+                      mb: { xs: 1, md: 1.5 },
+                    }}
                   >
                     Account Balance
                   </Typography>
@@ -865,28 +1160,28 @@ const ManageUsers = () => {
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Total Balance"
-                        value={`$${userDetails.Balance?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.Balance?.toLocaleString() || "0"}`}
                         color={AppColors.GOLD_DARK}
                       />
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Winning Balance"
-                        value={`$${userDetails.winningBalance?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.winningBalance?.toLocaleString() || "0"}`}
                         color={AppColors.SUCCESS}
                       />
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Withdrawable"
-                        value={`$${userDetails.withdrawableWinnings?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.withdrawableWinnings?.toLocaleString() || "0"}`}
                         color={AppColors.GOLD_DARK}
                       />
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Lock Balance"
-                        value={`$${userDetails.lockBalance?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.lockBalance?.toLocaleString() || "0"}`}
                         color={AppColors.TXT_SUB}
                       />
                     </Grid>
@@ -897,7 +1192,11 @@ const ManageUsers = () => {
                 <Box sx={{ mb: { xs: 1, md: 1.5 } }}>
                   <Typography
                     variant="subtitle1"
-                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 600, mb: { xs: 1, md: 1.5 } }}
+                    sx={{
+                      color: AppColors.TXT_MAIN,
+                      fontWeight: 600,
+                      mb: { xs: 1, md: 1.5 },
+                    }}
                   >
                     Income & Trading Statistics
                   </Typography>
@@ -905,42 +1204,42 @@ const ManageUsers = () => {
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Referral Income"
-                        value={`$${userDetails.referralIncome?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.referralIncome?.toLocaleString() || "0"}`}
                         color={AppColors.GOLD_DARK}
                       />
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Level Income"
-                        value={`$${userDetails.levelIncome?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.levelIncome?.toLocaleString() || "0"}`}
                         color={AppColors.SUCCESS}
                       />
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Working Income"
-                        value={`$${userDetails.totalWorkingIncome?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.totalWorkingIncome?.toLocaleString() || "0"}`}
                         color={AppColors.SUCCESS}
                       />
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Total Deposited"
-                        value={`$${userDetails.totalDeposited?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.totalDeposited?.toLocaleString() || "0"}`}
                         color={AppColors.GOLD_DARK}
                       />
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Trade Volume"
-                        value={`$${userDetails.totalTradedVolume?.toLocaleString() || '0'}`}
+                        value={`$${userDetails.totalTradedVolume?.toLocaleString() || "0"}`}
                         color={AppColors.SUCCESS}
                       />
                     </Grid>
                     <Grid size={{ xs: 6, md: 3 }}>
                       <BalanceCard
                         label="Referrals"
-                        value={userDetails.referrals?.length || '0'}
+                        value={userDetails.referrals?.length || "0"}
                         color={AppColors.GOLD_DARK}
                       />
                     </Grid>
@@ -948,63 +1247,97 @@ const ManageUsers = () => {
                 </Box>
 
                 {/* Action Buttons */}
-                <Divider sx={{ my: { xs: 1, md: 1.5 }, borderColor: AppColors.BG_SECONDARY }} />
-                <Box sx={{ display: 'flex', gap: { xs: 1, md: 1.5 }, flexWrap: 'wrap' }}>
+                <Divider
+                  sx={{
+                    my: { xs: 1, md: 1.5 },
+                    borderColor: AppColors.BG_SECONDARY,
+                  }}
+                />
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: { xs: 1, md: 1.5 },
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
                   {/* Block/Unblock Button */}
                   <Button
                     variant="outlined"
-                    startIcon={userDetails.isBlocked ? <Check fontSize="small" /> : <Block fontSize="small" />}
+                    startIcon={
+                      userDetails.isBlocked ? (
+                        <Check fontSize="small" />
+                      ) : (
+                        <Block fontSize="small" />
+                      )
+                    }
                     onClick={() =>
-                      updateUserStatus(userDetails._id, {
+                      updateUserStatus(userDetails.UID, {
                         isBlocked: !userDetails.isBlocked,
                       })
                     }
                     disabled={actionLoading || userDetails.isDeleted}
                     sx={{
-                      borderColor: userDetails.isBlocked ? AppColors.SUCCESS : AppColors.ERROR,
-                      color: userDetails.isBlocked ? AppColors.SUCCESS : AppColors.ERROR,
-                      '&:hover': {
-                        borderColor: userDetails.isBlocked ? AppColors.SUCCESS : AppColors.ERROR,
+                      borderColor: userDetails.isBlocked
+                        ? AppColors.SUCCESS
+                        : AppColors.ERROR,
+                      color: userDetails.isBlocked
+                        ? AppColors.SUCCESS
+                        : AppColors.ERROR,
+                      "&:hover": {
+                        borderColor: userDetails.isBlocked
+                          ? AppColors.SUCCESS
+                          : AppColors.ERROR,
                         backgroundColor: userDetails.isBlocked
                           ? `${AppColors.SUCCESS}10`
                           : `${AppColors.ERROR}10`,
                       },
                     }}
                   >
-                    {userDetails.isBlocked ? 'Unblock User' : 'Block User'}
+                    {userDetails.isBlocked ? "Unblock User" : "Block User"}
                   </Button>
 
                   {/* Delete/Restore Button */}
                   <Button
                     variant="outlined"
-                    startIcon={userDetails.isDeleted ? <Restore fontSize="small" /> : <Delete fontSize="small" />}
+                    startIcon={
+                      userDetails.isDeleted ? (
+                        <Restore fontSize="small" />
+                      ) : (
+                        <Delete fontSize="small" />
+                      )
+                    }
                     onClick={() =>
-                      updateUserStatus(userDetails._id, {
+                      updateUserStatus(userDetails.UID, {
                         isDeleted: !userDetails.isDeleted,
                       })
                     }
                     disabled={actionLoading}
                     sx={{
-                      borderColor: userDetails.isDeleted ? AppColors.SUCCESS : AppColors.ERROR,
-                      color: userDetails.isDeleted ? AppColors.SUCCESS : AppColors.ERROR,
-                      '&:hover': {
-                        borderColor: userDetails.isDeleted ? AppColors.SUCCESS : AppColors.ERROR,
+                      borderColor: userDetails.isDeleted
+                        ? AppColors.SUCCESS
+                        : AppColors.ERROR,
+                      color: userDetails.isDeleted
+                        ? AppColors.SUCCESS
+                        : AppColors.ERROR,
+                      "&:hover": {
+                        borderColor: userDetails.isDeleted
+                          ? AppColors.SUCCESS
+                          : AppColors.ERROR,
                         backgroundColor: userDetails.isDeleted
                           ? `${AppColors.SUCCESS}10`
                           : `${AppColors.ERROR}10`,
                       },
                     }}
                   >
-                    {userDetails.isDeleted ? 'Restore User' : 'Delete User'}
+                    {userDetails.isDeleted ? "Restore User" : "Delete User"}
                   </Button>
 
-                  {actionLoading && (
-                    <BTLoader />
-                  )}
+                  {actionLoading && <CircularProgress size={20} />}
                 </Box>
               </>
             ) : (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Box sx={{ textAlign: "center", py: 4 }}>
                 <Typography sx={{ color: AppColors.TXT_SUB }}>
                   Failed to load user details
                 </Typography>
@@ -1014,14 +1347,14 @@ const ManageUsers = () => {
         </Card>
       </Modal>
 
-      {/* Dummy Deposit Modal */}
+      {/* Give Salary Modal */}
       <Modal
-        open={dummyDepositOpen}
-        onClose={handleCloseDummyDeposit}
+        open={salaryOpen}
+        onClose={handleCloseSalary}
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           p: { xs: 1, md: 2 },
         }}
       >
@@ -1031,31 +1364,281 @@ const ManageUsers = () => {
             border: `1px solid ${AppColors.BG_SECONDARY}`,
             borderRadius: 3,
             maxWidth: 440,
-            width: '100%',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+            width: "100%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
           }}
         >
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                 <Box
                   sx={{
                     width: 40,
                     height: 40,
                     borderRadius: 2,
                     bgcolor: `${AppColors.GOLD_DARK}20`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  <AccountBalanceWallet sx={{ color: AppColors.GOLD_DARK, fontSize: 24 }} />
+                  <Paid sx={{ color: AppColors.GOLD_DARK, fontSize: 24 }} />
                 </Box>
                 <Box>
-                  <Typography variant="h6" sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}
+                  >
+                    Give Salary
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: AppColors.TXT_SUB }}
+                  >
+                    Give salary to a user (admin)
+                  </Typography>
+                </Box>
+              </Box>
+              <IconButton
+                onClick={handleCloseSalary}
+                size="small"
+                sx={{
+                  color: AppColors.TXT_SUB,
+                  "&:hover": {
+                    backgroundColor: `${AppColors.ERROR}20`,
+                    color: AppColors.ERROR,
+                  },
+                }}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            <Box
+              component="form"
+              onSubmit={handleSalarySubmit}
+              noValidate
+              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              {salaryFormError && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.ERROR,
+                    bgcolor: `${AppColors.ERROR}14`,
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: 1,
+                  }}
+                >
+                  {salaryFormError}
+                </Typography>
+              )}
+
+              <TextField
+                fullWidth
+                required
+                label="User UID"
+                placeholder="e.g. EXTRADE000370"
+                value={salaryForm.UID}
+                disabled
+                onChange={(e) =>
+                  setSalaryForm((p) => ({ ...p, UID: e.target.value }))
+                }
+                InputProps={{
+                  sx: {
+                    bgcolor: AppColors.BG_SECONDARY,
+                    borderRadius: 2,
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
+                  },
+                }}
+                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
+              />
+
+              <TextField
+                fullWidth
+                required
+                label="Salary Amount"
+                type="number"
+                inputProps={{ min: 0.01, step: 0.01 }}
+                placeholder="0.00"
+                value={salaryForm.salaryAmount}
+                onChange={(e) =>
+                  setSalaryForm((p) => ({ ...p, salaryAmount: e.target.value }))
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment
+                      position="start"
+                      sx={{ color: AppColors.TXT_SUB }}
+                    >
+                      $
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    bgcolor: AppColors.BG_SECONDARY,
+                    borderRadius: 2,
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
+                  },
+                }}
+                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
+              />
+
+              <DatePicker
+                label="Date"
+                value={salaryForm.date}
+                onChange={(value) =>
+                  setSalaryForm((p) => ({ ...p, date: value }))
+                }
+                sx={{
+                  bgcolor: AppColors.BG_SECONDARY,
+                  borderRadius: 2,
+                  "& fieldset": { borderColor: "transparent" },
+                  "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                  "&.Mui-focused fieldset": {
+                    borderColor: AppColors.GOLD_DARK,
+                  },
+                  "& input": { color: AppColors.TXT_MAIN },
+                  "& label": { color: AppColors.TXT_SUB },
+                  "& label.Mui-focused": { color: AppColors.GOLD_DARK },
+                  "& .MuiSvgIcon-root": { color: AppColors.TXT_SUB },
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Note (optional)"
+                placeholder="e.g. given by admin"
+                value={salaryForm.note}
+                onChange={(e) =>
+                  setSalaryForm((p) => ({ ...p, note: e.target.value }))
+                }
+                multiline
+                rows={2}
+                InputProps={{
+                  sx: {
+                    bgcolor: AppColors.BG_SECONDARY,
+                    borderRadius: 2,
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& textarea": { color: AppColors.TXT_MAIN },
+                  },
+                }}
+                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
+              />
+
+              <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleCloseSalary}
+                  disabled={salarySubmitting}
+                  sx={{
+                    borderColor: AppColors.BG_SECONDARY,
+                    color: AppColors.TXT_MAIN,
+                    "&:hover": {
+                      borderColor: AppColors.TXT_SUB,
+                      bgcolor: `${AppColors.TXT_SUB}10`,
+                    },
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  fullWidth
+                  className="btn-primary"
+                  type="submit"
+                  disabled={salarySubmitting}
+                >
+                  {salarySubmitting ? (
+                    <CircularProgress size={22} sx={{ color: "inherit" }} />
+                  ) : (
+                    "Confirm Salary"
+                  )}
+                </Button>
+              </Stack>
+            </Box>
+          </CardContent>
+        </Card>
+      </Modal>
+
+      {/* Dummy Deposit Modal */}
+      <Modal
+        open={dummyDepositOpen}
+        onClose={handleCloseDummyDeposit}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: { xs: 1, md: 2 },
+        }}
+      >
+        <Card
+          sx={{
+            backgroundColor: AppColors.BG_CARD,
+            border: `1px solid ${AppColors.BG_SECONDARY}`,
+            borderRadius: 3,
+            maxWidth: 440,
+            width: "100%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+          }}
+        >
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    bgcolor: `${AppColors.GOLD_DARK}20`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <AccountBalanceWallet
+                    sx={{ color: AppColors.GOLD_DARK, fontSize: 24 }}
+                  />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="h6"
+                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}
+                  >
                     Dummy Deposit
                   </Typography>
-                  <Typography variant="caption" sx={{ color: AppColors.TXT_SUB }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: AppColors.TXT_SUB }}
+                  >
                     Credit balance for a user (admin)
                   </Typography>
                 </Box>
@@ -1065,7 +1648,10 @@ const ManageUsers = () => {
                 size="small"
                 sx={{
                   color: AppColors.TXT_SUB,
-                  '&:hover': { backgroundColor: `${AppColors.ERROR}20`, color: AppColors.ERROR },
+                  "&:hover": {
+                    backgroundColor: `${AppColors.ERROR}20`,
+                    color: AppColors.ERROR,
+                  },
                 }}
               >
                 <Close />
@@ -1076,7 +1662,7 @@ const ManageUsers = () => {
               component="form"
               onSubmit={handleDummyDepositSubmit}
               noValidate
-              sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
             >
               {dummyFormError && (
                 <Typography
@@ -1099,15 +1685,19 @@ const ManageUsers = () => {
                 label="User UID"
                 placeholder="e.g. EXTRADE000369"
                 value={dummyForm.UID}
-                onChange={(e) => setDummyForm((p) => ({ ...p, UID: e.target.value }))}
+                onChange={(e) =>
+                  setDummyForm((p) => ({ ...p, UID: e.target.value }))
+                }
                 InputProps={{
                   sx: {
                     bgcolor: AppColors.BG_SECONDARY,
                     borderRadius: 2,
-                    '& fieldset': { borderColor: 'transparent' },
-                    '&:hover fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '&.Mui-focused fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '& input': { color: AppColors.TXT_MAIN },
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
                   },
                 }}
                 InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
@@ -1121,20 +1711,27 @@ const ManageUsers = () => {
                 inputProps={{ min: 0.01, step: 0.01 }}
                 placeholder="0.00"
                 value={dummyForm.amount}
-                onChange={(e) => setDummyForm((p) => ({ ...p, amount: e.target.value }))}
+                onChange={(e) =>
+                  setDummyForm((p) => ({ ...p, amount: e.target.value }))
+                }
                 InputProps={{
                   startAdornment: (
-                    <InputAdornment position="start" sx={{ color: AppColors.TXT_SUB }}>
+                    <InputAdornment
+                      position="start"
+                      sx={{ color: AppColors.TXT_SUB }}
+                    >
                       $
                     </InputAdornment>
                   ),
                   sx: {
                     bgcolor: AppColors.BG_SECONDARY,
                     borderRadius: 2,
-                    '& fieldset': { borderColor: 'transparent' },
-                    '&:hover fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '&.Mui-focused fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '& input': { color: AppColors.TXT_MAIN },
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
                   },
                 }}
                 InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
@@ -1145,17 +1742,21 @@ const ManageUsers = () => {
                 label="Note (optional)"
                 placeholder="e.g. Bonus credit"
                 value={dummyForm.note}
-                onChange={(e) => setDummyForm((p) => ({ ...p, note: e.target.value }))}
+                onChange={(e) =>
+                  setDummyForm((p) => ({ ...p, note: e.target.value }))
+                }
                 multiline
                 rows={2}
                 InputProps={{
                   sx: {
                     bgcolor: AppColors.BG_SECONDARY,
                     borderRadius: 2,
-                    '& fieldset': { borderColor: 'transparent' },
-                    '&:hover fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '&.Mui-focused fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '& textarea': { color: AppColors.TXT_MAIN },
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& textarea": { color: AppColors.TXT_MAIN },
                   },
                 }}
                 InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
@@ -1170,21 +1771,24 @@ const ManageUsers = () => {
                   sx={{
                     borderColor: AppColors.BG_SECONDARY,
                     color: AppColors.TXT_MAIN,
-                    '&:hover': { borderColor: AppColors.TXT_SUB, bgcolor: `${AppColors.TXT_SUB}10` },
+                    "&:hover": {
+                      borderColor: AppColors.TXT_SUB,
+                      bgcolor: `${AppColors.TXT_SUB}10`,
+                    },
                   }}
                 >
                   Cancel
                 </Button>
                 <Button
                   fullWidth
-                  className='btn-primary'
+                  className="btn-primary"
                   type="submit"
                   disabled={dummyDepositSubmitting}
                 >
                   {dummyDepositSubmitting ? (
-                    <CircularProgress size={22} sx={{ color: 'inherit' }} />
+                    <CircularProgress size={22} sx={{ color: "inherit" }} />
                   ) : (
-                    'Confirm Deposit'
+                    "Confirm Deposit"
                   )}
                 </Button>
               </Stack>
@@ -1198,9 +1802,9 @@ const ManageUsers = () => {
         open={openUserStatsModal}
         onClose={handleCloseUserStatsModal}
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           p: { xs: 1, md: 2 },
         }}
       >
@@ -1210,31 +1814,44 @@ const ManageUsers = () => {
             border: `1px solid ${AppColors.BG_SECONDARY}`,
             borderRadius: 3,
             maxWidth: 440,
-            width: '100%',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+            width: "100%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
           }}
         >
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                 <Box
                   sx={{
                     width: 40,
                     height: 40,
                     borderRadius: 2,
                     bgcolor: `${AppColors.GOLD_DARK}20`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
                   <Update sx={{ color: AppColors.GOLD_DARK, fontSize: 24 }} />
                 </Box>
                 <Box>
-                  <Typography variant="h6" sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}
+                  >
                     Update User Stats
                   </Typography>
-                  <Typography variant="caption" sx={{ color: AppColors.TXT_SUB }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: AppColors.TXT_SUB }}
+                  >
                     Set total users and new users counts for dashboard stats
                   </Typography>
                 </Box>
@@ -1244,7 +1861,10 @@ const ManageUsers = () => {
                 size="small"
                 sx={{
                   color: AppColors.TXT_SUB,
-                  '&:hover': { backgroundColor: `${AppColors.ERROR}20`, color: AppColors.ERROR },
+                  "&:hover": {
+                    backgroundColor: `${AppColors.ERROR}20`,
+                    color: AppColors.ERROR,
+                  },
                 }}
                 aria-label="Close"
               >
@@ -1256,7 +1876,7 @@ const ManageUsers = () => {
               component="form"
               onSubmit={handleUserStatsSubmit}
               noValidate
-              sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
             >
               {userStatsFormError && (
                 <Typography
@@ -1281,15 +1901,22 @@ const ManageUsers = () => {
                 inputProps={{ min: 0, step: 1 }}
                 placeholder="e.g. 10"
                 value={userStatsForm.totalUsers}
-                onChange={(e) => setUserStatsForm((p) => ({ ...p, totalUsers: parseInt(e.target.value) || 0 }))}
+                onChange={(e) =>
+                  setUserStatsForm((p) => ({
+                    ...p,
+                    totalUsers: parseInt(e.target.value) || 0,
+                  }))
+                }
                 InputProps={{
                   sx: {
                     bgcolor: AppColors.BG_SECONDARY,
                     borderRadius: 2,
-                    '& fieldset': { borderColor: 'transparent' },
-                    '&:hover fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '&.Mui-focused fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '& input': { color: AppColors.TXT_MAIN },
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
                   },
                 }}
                 InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
@@ -1303,15 +1930,22 @@ const ManageUsers = () => {
                 inputProps={{ min: 0, step: 1 }}
                 placeholder="e.g. 5"
                 value={userStatsForm.newUsers}
-                onChange={(e) => setUserStatsForm((p) => ({ ...p, newUsers: parseInt(e.target.value) || 0 }))}
+                onChange={(e) =>
+                  setUserStatsForm((p) => ({
+                    ...p,
+                    newUsers: parseInt(e.target.value) || 0,
+                  }))
+                }
                 InputProps={{
                   sx: {
                     bgcolor: AppColors.BG_SECONDARY,
                     borderRadius: 2,
-                    '& fieldset': { borderColor: 'transparent' },
-                    '&:hover fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '&.Mui-focused fieldset': { borderColor: AppColors.GOLD_DARK },
-                    '& input': { color: AppColors.TXT_MAIN },
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
                   },
                 }}
                 InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
@@ -1326,7 +1960,10 @@ const ManageUsers = () => {
                   sx={{
                     borderColor: AppColors.BG_SECONDARY,
                     color: AppColors.TXT_MAIN,
-                    '&:hover': { borderColor: AppColors.TXT_SUB, bgcolor: `${AppColors.TXT_SUB}10` },
+                    "&:hover": {
+                      borderColor: AppColors.TXT_SUB,
+                      bgcolor: `${AppColors.TXT_SUB}10`,
+                    },
                   }}
                 >
                   Cancel
@@ -1338,9 +1975,9 @@ const ManageUsers = () => {
                   disabled={userStatsSubmitting}
                 >
                   {userStatsSubmitting ? (
-                    <CircularProgress size={22} sx={{ color: 'inherit' }} />
+                    <CircularProgress size={22} sx={{ color: "inherit" }} />
                   ) : (
-                    'Update Stats'
+                    "Update Stats"
                   )}
                 </Button>
               </Stack>
@@ -1354,23 +1991,163 @@ const ManageUsers = () => {
 
 // User Info Item Component
 const UserInfoItem = ({ label, value, icon, highlight = false }) => (
-  <Box sx={{ p: { xs: 1, md: 1.5 }, backgroundColor: AppColors.BG_SECONDARY, borderRadius: 2 }}>
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+  <Box
+    sx={{
+      p: { xs: 1, md: 1.5 },
+      backgroundColor: AppColors.BG_SECONDARY,
+      borderRadius: 2,
+    }}
+  >
+    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
       {icon && <Box sx={{ color: AppColors.GOLD_DARK }}>{icon}</Box>}
-      <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase' }}>
+      <Typography
+        variant="caption"
+        sx={{ color: AppColors.TXT_SUB, textTransform: "uppercase" }}
+      >
         {label}
       </Typography>
     </Box>
     <Typography
       variant="body2"
+      component="div"
       sx={{
         color: highlight ? AppColors.GOLD_DARK : AppColors.TXT_MAIN,
         fontWeight: highlight ? 600 : 400,
-        fontFamily: highlight ? 'monospace' : 'inherit',
+        fontFamily: highlight ? "monospace" : "inherit",
       }}
     >
-      {typeof value === 'string' ? value : value}
+      {typeof value === "string" ? value : value}
     </Typography>
+  </Box>
+);
+
+const UserEmailItem = ({
+  label,
+  value,
+  icon,
+  highlight = false,
+  editable = false,
+  editing = false,
+  draft = "",
+  onEdit,
+  onDraftChange,
+  onCancel,
+  onSave,
+  saving = false,
+}) => (
+  <Box
+    sx={{
+      p: { xs: 1, md: 1.5 },
+      backgroundColor: AppColors.BG_SECONDARY,
+      borderRadius: 2,
+    }}
+  >
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 1,
+        mb: 1,
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        {icon && <Box sx={{ color: AppColors.GOLD_DARK }}>{icon}</Box>}
+        <Typography
+          variant="caption"
+          sx={{ color: AppColors.TXT_SUB, textTransform: "uppercase" }}
+        >
+          {label}
+        </Typography>
+      </Box>
+
+      {editable && !editing && (
+        <IconButton
+          size="small"
+          onClick={onEdit}
+          sx={{
+            color: AppColors.GOLD_DARK,
+            "&:hover": { backgroundColor: `${AppColors.GOLD_DARK}20` },
+          }}
+        >
+          <Edit fontSize="small" />
+        </IconButton>
+      )}
+    </Box>
+
+    {editable && editing ? (
+      <TextField
+        variant="standard"
+        fullWidth
+        autoFocus
+        value={draft}
+        disabled={saving}
+        onChange={(e) => onDraftChange?.(e.target.value)}
+        placeholder="user@example.com"
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end" sx={{ gap: 0.5 }}>
+              <IconButton
+                size="small"
+                onClick={onCancel}
+                disabled={saving}
+                sx={{
+                  color: AppColors.TXT_SUB,
+                  "&:hover": {
+                    backgroundColor: `${AppColors.ERROR}20`,
+                    color: AppColors.ERROR,
+                  },
+                }}
+              >
+                <Close fontSize="small" sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                onClick={onSave}
+                disabled={saving}
+                sx={{
+                  color: AppColors.SUCCESS,
+                  "&:hover": { backgroundColor: `${AppColors.SUCCESS}20` },
+                }}
+              >
+                {saving ? (
+                  <CircularProgress size={16} sx={{ color: "inherit" }} />
+                ) : (
+                  <Check fontSize="small" sx={{ fontSize: 16 }} />
+                )}
+              </IconButton>
+            </InputAdornment>
+          ),
+          sx: {
+            bgcolor: "transparent",
+            borderRadius: 0,
+            "& fieldset": { borderColor: "none" },
+            "&:hover fieldset": { borderColor: "none" },
+            "&.Mui-focused fieldset": {
+              borderColor: "none",
+            },
+            "& input": {
+              color: AppColors.TXT_MAIN,
+              p: 0,
+              fontSize: FONT_SIZE.CAPTION,
+            },
+          },
+        }}
+      />
+    ) : (
+      <Typography
+        variant="body2"
+        component="div"
+        sx={{
+          color: highlight ? AppColors.GOLD_DARK : AppColors.TXT_MAIN,
+          fontWeight: highlight ? 600 : 400,
+          fontFamily: highlight ? "monospace" : "inherit",
+          wordBreak: "break-word",
+        }}
+      >
+        {typeof value === "string" ? value : value}
+      </Typography>
+    )}
   </Box>
 );
 
@@ -1381,7 +2158,7 @@ const BalanceCard = ({ label, value, color }) => (
       p: { xs: 1, md: 1.5 },
       backgroundColor: AppColors.BG_SECONDARY,
       borderRadius: 2,
-      textAlign: 'center',
+      textAlign: "center",
     }}
   >
     <Typography
@@ -1398,8 +2175,8 @@ const BalanceCard = ({ label, value, color }) => (
       variant="caption"
       sx={{
         color: AppColors.TXT_SUB,
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
       }}
     >
       {label}

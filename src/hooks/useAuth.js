@@ -1,71 +1,47 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { clearUser, setUserData } from '../store/slices/userAuthSlice';
 import Cookies from 'js-cookie';
 
 export const useAuth = () => {
   const dispatch = useDispatch();
   const cookieToken = Cookies.get('token');
+  const cookieToken2 = Cookies.get('token2');
   const storedRefreshToken = Cookies.get('refreshToken');
   const data = useSelector((state) => state.userAuth);
   const user = data?.userData;
   const token = data?.token ?? cookieToken;
-
-  // Initialize isSecondGame from localStorage
-  const getIsSecondGame = () => {
-    const isSecondGame = localStorage.getItem('isSecondGame');
-    return isSecondGame ? JSON.parse(isSecondGame) : false;
-  };
-
-  const [isSecondGame, setIsSecondGameState] = useState(() => getIsSecondGame());
+  const token2 = data?.token2 ?? cookieToken2;
 
   const clear = useCallback(() => {
     dispatch(clearUser());
     Cookies.remove('token');
+    Cookies.remove('token2');
     Cookies.remove('refreshToken');
     localStorage.clear();
   }, [dispatch]);
 
-  const setUser = useCallback((userData, token, refreshToken) => {
+  const setUser = useCallback((userData, token = null, token2 = null, refreshToken = null) => {
     if (token) {
       Cookies.set('token', token);
+    }
+    if (token2) {
+      Cookies.set('token2', token2);
     }
     if (refreshToken) {
       Cookies.set('refreshToken', refreshToken);
     }
-    dispatch(setUserData({ userData, token }));
+    dispatch(setUserData({ userData, token, token2 }));
   }, [dispatch]);
-
-  // const getUserData = useCallback(async () => {
-  //   if (!token) return null;
-  //   try {
-  //     const response = await authService.getUser();
-  //     if (response.success) {
-  //       dispatch(setUserData({ userData: response.data.user, token }));
-  //       return response.data.user;
-  //     }
-  //     return null;
-  //   } catch (error) {
-  //     console.error('Error fetching user data:', error);
-  //     return null;
-  //   }
-  // }, [token, dispatch]);
-
-  const setIsSecondGame = useCallback((value) => {
-    const newValue = typeof value === 'function' ? value(isSecondGame) : value;
-    localStorage.setItem('isSecondGame', JSON.stringify(newValue));
-    setIsSecondGameState(newValue);
-  }, [isSecondGame]);
 
   return {
     userData: user,
     token,
+    token2,
     isLoggedIn: Boolean(token),
     refreshToken: storedRefreshToken,
-    isSecondGame,
     clear,
     setUser,
-    setIsSecondGame,
   };
 };
 

@@ -33,7 +33,6 @@ const TelegramLinksPage = () => {
   const [form, setForm] = useState({
     telegramUrl: '',
     groupTelegramUrl: '',
-    // promotionalUrl: '',
     facebookUrl: '',
     instagramUrl: '',
   });
@@ -50,6 +49,8 @@ const TelegramLinksPage = () => {
         setForm({
           telegramUrl: data.telegramUrl ?? '',
           groupTelegramUrl: data.groupTelegramUrl ?? '',
+          facebookUrl: data.facebookUrl ?? '',
+          instagramUrl: data.instagramUrl ?? '',
         });
       } else {
         setError(response?.message || 'Failed to load social config');

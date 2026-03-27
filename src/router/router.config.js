@@ -3,20 +3,8 @@ import asyncComponent from "../utils/asyncComponent.jsx";
 
 export const authRouters = [
   {
-    path: "/trade/login",
-    component: asyncComponent(() => import("../pages/auth/LoginTrade.jsx")),
-  },
-  {
-    path: "/trade/forgot-password",
-    component: asyncComponent(() => import("../pages/auth/ForgotPassword.jsx")),
-  },
-  {
-    path: "/network/login",
-    component: asyncComponent(() => import("../pages/auth/LoginNetwork.jsx")),
-  },
-  {
-    path: "/network/forgot-password",
-    component: asyncComponent(() => import("../pages/auth/ForgotPassword2.jsx")),
+    path: "/login",
+    component: asyncComponent(() => import("../pages/auth/Login.jsx")),
   }
 ];
 

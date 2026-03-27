@@ -2,25 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import {
-  Box,
-  Container,
-  Typography,
-  Button,
-  IconButton,
-} from "@mui/material";
-import {
-  Visibility,
-  VisibilityOff,
-  Email,
-  Lock,
-} from "@mui/icons-material";
+import { Box, Container, Typography, Button, IconButton } from "@mui/material";
+import { Visibility, VisibilityOff, Email, Lock } from "@mui/icons-material";
 import { AppColors } from "../../constant/appColors";
-import networkService from "../../services/networkService";
+import authService from "../../services/authService";
 import useSnackbar from "../../hooks/useSnackbar";
 import TextInput from "../../components/input/textInput";
 import BtParalex from "../../components/heroBetBit/BtParalex";
-import { useAuth2 } from "../../hooks/useAuth2";
+import { useAuth } from "../../hooks/useAuth";
 
 const validationSchema = Yup.object({
   email: Yup.string()
@@ -31,12 +20,12 @@ const validationSchema = Yup.object({
     .min(6, "Password must be at least 6 characters"),
 });
 
-export default function NetworkAdminLogin() {
+export default function LoginTrade() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { showSnackbar } = useSnackbar();
-  const { setUser } = useAuth2();
+  const { setUser } = useAuth();
 
   const formik = useFormik({
     initialValues: {
@@ -48,27 +37,37 @@ export default function NetworkAdminLogin() {
       setLoading(true);
 
       try {
-        const response = await networkService.signin({
-          email: values.email.trim(),
-          password: values.password,
-        });
+        const [tradeResponse, networkResponse] = await Promise.all([
+          authService.loginTrade({
+            email: values.email.trim(),
+            password: values.password,
+          }),
+          authService.loginNetwork({
+            email: values.email.trim(),
+            password: values.password,
+          }),
+        ]);
 
-        const { data, message } = response || {};
+        const { Data: tradeData, message: tradeMessage } = tradeResponse || {};
+        const { data: networkData } = networkResponse || {};
 
-        if (data?.token) {
-          setUser(data.user, data.token);
-          showSnackbar(message || "Login successful", "success");
-          navigate("/network/dashboard");
-        }else{
-          showSnackbar(message || "Login failed. Please try again.", "error");
+        if (tradeData?.token && networkData?.token) {
+          setUser(tradeData.user, tradeData.token, networkData.token);
+          showSnackbar(tradeMessage || "Login successful", "success");
+          navigate("/");
+        } else {
+          showSnackbar(
+            tradeMessage || "Login failed. Please try again.",
+            "error",
+          );
         }
       } catch (err) {
-        console.error("❌ Network admin login failed:", err);
+        console.error("❌ Admin login failed:", err);
         showSnackbar(
           err.response?.data?.message ||
-          err.message ||
-          "Login failed. Please try again.",
-          "error"
+            err.message ||
+            "Login failed. Please try again.",
+          "error",
         );
       } finally {
         setLoading(false);
@@ -84,20 +83,19 @@ export default function NetworkAdminLogin() {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          py: { xs: 2, sm: 3, md: 4 },
           px: { xs: 1.5, sm: 2, md: 3 },
         }}
       >
         <Container
-          maxWidth="sm"
+          maxWidth="lg"
           sx={{
             width: "100%",
-            maxWidth: { xs: "100%", sm: "500px", md: "600px" },
+            maxWidth: { xs: "100%", lg: "600px" },
           }}
         >
           <Box
             sx={{
-              p: { xs: 2, sm: 3, md: 4 },
+              p: { xs: 0, lg: 4 },
             }}
           >
             <Box sx={{ mb: { xs: 3, sm: 4 }, textAlign: "center" }}>
@@ -109,7 +107,7 @@ export default function NetworkAdminLogin() {
                   fontWeight: 600,
                 }}
               >
-                Network Admin Login
+                Admin Trade Login
               </Typography>
               <Typography
                 variant="body2"
@@ -117,20 +115,26 @@ export default function NetworkAdminLogin() {
                   color: AppColors.TXT_SUB,
                 }}
               >
-                Network/Investment Admin Panel
+                Trading Trade Panel
               </Typography>
             </Box>
 
-            <Box component="form" onSubmit={formik.handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <Box
+              component="form"
+              onSubmit={formik.handleSubmit}
+              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+            >
               <TextInput
                 name="email"
-                placeholder="Enter admin email"
+                placeholder="Enter trade email"
                 value={formik.values.email}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 error={formik.touched.email && Boolean(formik.errors.email)}
                 helperText={formik.touched.email && formik.errors.email}
-                startIcon={<Email sx={{ color: AppColors.TXT_SUB, fontSize: 20 }} />}
+                startIcon={
+                  <Email sx={{ color: AppColors.TXT_SUB, fontSize: 20 }} />
+                }
               />
 
               <TextInput
@@ -140,14 +144,21 @@ export default function NetworkAdminLogin() {
                 value={formik.values.password}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
-                error={formik.touched.password && Boolean(formik.errors.password)}
+                error={
+                  formik.touched.password && Boolean(formik.errors.password)
+                }
                 helperText={formik.touched.password && formik.errors.password}
-                startIcon={<Lock sx={{ color: AppColors.TXT_SUB, fontSize: 20 }} />}
+                startIcon={
+                  <Lock sx={{ color: AppColors.TXT_SUB, fontSize: 20 }} />
+                }
                 endIcon={
                   <IconButton
                     onClick={() => setShowPassword(!showPassword)}
                     edge="end"
-                    sx={{ color: AppColors.TXT_SUB, "&:hover": { color: AppColors.GOLD_PRIMARY } }}
+                    sx={{
+                      color: AppColors.TXT_SUB,
+                      "&:hover": { color: AppColors.GOLD_PRIMARY },
+                    }}
                   >
                     {showPassword ? <VisibilityOff /> : <Visibility />}
                   </IconButton>
@@ -156,12 +167,11 @@ export default function NetworkAdminLogin() {
 
               <Button
                 type="submit"
-                fullWidth
                 disabled={loading}
                 className="btn-primary"
                 sx={{
                   mb: { xs: 1, sm: 3 },
-                  py: { xs: 1.5, sm: 1.75 },
+                  py: { xs: 1, lg: 1.5 },
                 }}
               >
                 {loading ? "Signing in..." : "Sign In"}

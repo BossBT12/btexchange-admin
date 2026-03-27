@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Box, IconButton, Typography, Avatar, useMediaQuery, Menu, MenuItem, ListItemIcon } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { useAuth } from "../../hooks/useAuth";
-import { useAuth2 } from "../../hooks/useAuth2";
 import MenuIcon from "@mui/icons-material/Menu";
 import WidgetsOutlined from "@mui/icons-material/WidgetsOutlined";
 import BebitLogo from "../../assets/images/btLogo.webp";
@@ -12,12 +11,15 @@ import TradeGameIcon from "../../assets/images/tradeGame.png";
 import NetworkGameIcon from "../../assets/images/networkGame.png";
 import Logout from "@mui/icons-material/Logout";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import { useDispatch, useSelector } from "react-redux";
+import { setIsSecondGame } from "../../store/slices/userAuthSlice";
 
 const MainHeader = ({ onToggleSidebar }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const { isLoggedIn, clear, setIsSecondGame, isSecondGame } = useAuth();
-  const { clear: clear2 } = useAuth2();
+  const { isLoggedIn, clear } = useAuth();
+  const dispatch = useDispatch();
+  const { isSecondGame } = useSelector((state) => state.userAuth);
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -30,8 +32,7 @@ const MainHeader = ({ onToggleSidebar }) => {
 
   const handleLogout = () => {
     clear();
-    clear2();
-    navigate(isSecondGame ? "/network/login" : "/trade/login");
+    navigate("/login");
   };
 
   return (
@@ -250,7 +251,7 @@ const MainHeader = ({ onToggleSidebar }) => {
                 <Box
                   onClick={() => {
                     navigate("/");
-                    setIsSecondGame(false);
+                    dispatch(setIsSecondGame(false));
                   }}
                   sx={{
                     display: "flex",
@@ -341,7 +342,7 @@ const MainHeader = ({ onToggleSidebar }) => {
                 {/* Network Panel Profile Card */}
                 <Box
                   onClick={() => {
-                    setIsSecondGame(true);
+                    dispatch(setIsSecondGame(true));
                     navigate("/network/dashboard");
                   }}
                   sx={{

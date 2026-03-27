@@ -3,11 +3,6 @@ import networkApi from '../utils/axios2';
 const BASE_URL = '/admin';
 
 const networkService = {
-  signin: async (credentials) => {
-    const response = await networkApi.post(`${BASE_URL}/signin`, credentials);
-    return response.data;
-  },
-
   // Dashboard
   getDashboard: async () => {
     const response = await networkApi.get(`${BASE_URL}/dashboard`);
@@ -22,6 +17,11 @@ const networkService = {
 
   getUserDetails: async (userId) => {
     const response = await networkApi.get(`${BASE_URL}/user/${userId}`);
+    return response.data;
+  },
+
+  updateUserEmail: async (userId, email) => {
+    const response = await networkApi.put(`${BASE_URL}/user/${userId}/email`, { email });
     return response.data;
   },
 
