@@ -222,7 +222,8 @@ const MainHeader = ({ onToggleSidebar }) => {
                     filter: 'drop-shadow(0px 4px 16px rgba(0,0,0,0.4))',
                     mt: 1.5,
                     borderRadius: 3,
-                    p: 2.5,
+                    px: 2.5,
+                    py: 2,
                     minWidth: { xs: 280, sm: 320 },
                     '&::before': {
                       content: '""',
@@ -232,9 +233,13 @@ const MainHeader = ({ onToggleSidebar }) => {
                       right: 20,
                       width: 12,
                       height: 12,
-                      bgcolor: AppColors.BG_CARD,
+                      bgcolor: AppColors.BG_SECONDARY,
                       transform: 'translateY(-50%) rotate(45deg)',
                       zIndex: 0,
+                    },
+
+                    "& .MuiList-root": {
+                      p: 0,
                     },
                   },
                 },
@@ -244,7 +249,7 @@ const MainHeader = ({ onToggleSidebar }) => {
                 sx={{
                   display: "flex",
                   gap: 2.5,
-                  alignItems: "flex-start",
+                  justifyContent: "space-between",
                 }}
               >
                 {/* Trade Panel Profile Card */}

@@ -54,6 +54,14 @@ import DatePicker from "../../../components/input/datePicker";
 import { FONT_SIZE } from "../../../constant/lookUpConstant";
 import networkService from "../../../services/networkService";
 
+/** Empty string = no change (0 added). Digits only while typing. */
+function parseNonNegativeIncrementInput(raw) {
+  const t = String(raw ?? "").trim();
+  if (t === "") return { delta: 0, valid: true };
+  if (!/^\d+$/.test(t)) return { delta: 0, valid: false };
+  return { delta: Number.parseInt(t, 10), valid: true };
+}
+
 const ManageUsers = () => {
   const { showSnackbar } = useSnackbar();
 
@@ -100,12 +108,18 @@ const ManageUsers = () => {
     note: "",
   });
   const [salaryFormError, setSalaryFormError] = useState(null);
-
+  const [userStatsLoading, setUserStatsLoading] = useState(false);
   const [openUserStatsModal, setOpenUserStatsModal] = useState(false);
   const [userStatsSubmitting, setUserStatsSubmitting] = useState(false);
-  const [userStatsForm, setUserStatsForm] = useState({
+  /** Current server-side counts (read-only display) */
+  const [userStatsDisplay, setUserStatsDisplay] = useState({
     totalUsers: 0,
     newUsers: 0,
+  });
+  /** How much to add to each counter; blank = add 0 for that field */
+  const [userStatsIncrements, setUserStatsIncrements] = useState({
+    addTotal: "",
+    addNew: "",
   });
   const [userStatsFormError, setUserStatsFormError] = useState(null);
 
@@ -131,17 +145,10 @@ const ManageUsers = () => {
         params.isDeleted = false;
       }
 
-      const [response, userStatsResponse] = await Promise.all([
-        tradeService.getUsers(params),
-        tradeService.getUserStats(),
-      ]);
+      const response = await tradeService.getUsers(params);
       if (response.success) {
         setUsers(response.data || []);
         setTotalUsers(response.pagination?.total || 0);
-        setUserStatsForm({
-          totalUsers: userStatsResponse.data.totalUsers || 0,
-          newUsers: userStatsResponse.data.newUsers || 0,
-        });
       } else {
         showSnackbar("Failed to fetch users", "error");
       }
@@ -160,6 +167,26 @@ const ManageUsers = () => {
     sortOrder,
     showSnackbar,
   ]);
+
+  const fetchUserStats = async () => {
+    try {
+      setUserStatsLoading(true);
+      const response = await tradeService.getUserStats();
+      if (response.success) {
+        setUserStatsDisplay({
+          totalUsers: response.data?.totalUsers ?? 0,
+          newUsers: response.data?.newUsers ?? 0,
+        });
+      } else {
+        showSnackbar("Failed to fetch user stats", "error");
+      }
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+      showSnackbar("Error fetching user stats", "error");
+    } finally {
+      setUserStatsLoading(false);
+    }
+  };
 
   // Fetch user details
   const fetchUserDetails = async (userId, userUID) => {
@@ -183,39 +210,131 @@ const ManageUsers = () => {
     }
   };
 
-  // Update user status
   const updateUserStatus = async (UID, updates) => {
+    if (!UID || !updates || typeof updates !== "object") {
+      showSnackbar("Invalid user or update payload", "error");
+      return;
+    }
+
+    const isDeleteFlow = Object.prototype.hasOwnProperty.call(
+      updates,
+      "isDeleted",
+    );
+    const isBlockFlow = Object.prototype.hasOwnProperty.call(
+      updates,
+      "isBlocked",
+    );
+
+    const mergeDetailsIfOpen = () => {
+      setUserDetails((prev) =>
+        prev && prev.UID === UID ? { ...prev, ...updates } : prev,
+      );
+    };
+
+    const apiErrorMessage = (err) =>
+      err?.response?.data?.message || err?.message || "Request failed";
+
     try {
       setActionLoading(true);
-      const [tradeResponse, networkResponse] = await Promise.all([
-        tradeService.updateUserStatus(UID, updates),
-        networkService.blockUnblockUser(UID, {
-          isBlocked: updates.isBlocked,
-          reason: undefined,
-        }),
-      ]);
 
-      if (tradeResponse.success && networkResponse.success) {
+      // Delete / restore: trade service only (do not sync to network admin)
+      if (isDeleteFlow) {
+        const tradeResponse = await tradeService.updateUserStatus(UID, updates);
+        if (!tradeResponse?.success) {
+          showSnackbar(
+            tradeResponse?.message || "Failed to update user status",
+            "error",
+          );
+          return;
+        }
         showSnackbar(
-          tradeResponse.message ||
-            networkResponse.message ||
-            "User status updated successfully",
+          tradeResponse.message || "User status updated successfully",
           "success",
         );
-        fetchUsers(); // Refresh the list
-        if (userDetails && userDetails.UID === UID) {
-          // Update user details in modal
-          setUserDetails({
-            ...userDetails,
-            ...updates,
-          });
-        }
-      } else {
-        showSnackbar("Failed to update user status", "error");
+        fetchUsers();
+        mergeDetailsIfOpen();
+        return;
       }
+
+      // Block / unblock: trade + network admin must stay in sync
+      if (isBlockFlow) {
+        const [tradeResponse, networkResponse] = await Promise.all([
+          tradeService.updateUserStatus(UID, updates),
+          networkService.blockUnblockUser(UID, {
+            isBlocked: updates.isBlocked,
+          }),
+        ]);
+
+        const tradeOk = Boolean(tradeResponse?.success);
+        const networkOk = Boolean(networkResponse?.success);
+
+        if (tradeOk && networkOk) {
+          showSnackbar(
+            tradeResponse?.message ||
+              networkResponse?.message ||
+              "User status updated successfully",
+            "success",
+          );
+          fetchUsers();
+          mergeDetailsIfOpen();
+          return;
+        }
+
+        fetchUsers();
+
+        if (tradeOk && !networkOk) {
+          showSnackbar(
+            networkResponse?.message ||
+              "Trade updated but network admin sync failed. Reopen user details to verify.",
+            "error",
+          );
+          if (modalOpen && userDetails?.UID === UID) {
+            fetchUserDetails(undefined, UID);
+          }
+          return;
+        }
+
+        if (!tradeOk && networkOk) {
+          showSnackbar(
+            tradeResponse?.message ||
+              "Network updated but trade service failed. Data may be inconsistent.",
+            "error",
+          );
+          if (modalOpen && userDetails?.UID === UID) {
+            fetchUserDetails(undefined, UID);
+          }
+          return;
+        }
+
+        showSnackbar(
+          tradeResponse?.message ||
+            networkResponse?.message ||
+            "Failed to update user status",
+          "error",
+        );
+        return;
+      }
+
+      const tradeResponse = await tradeService.updateUserStatus(UID, updates);
+      if (!tradeResponse?.success) {
+        showSnackbar(
+          tradeResponse?.message || "Failed to update user status",
+          "error",
+        );
+        return;
+      }
+      showSnackbar(
+        tradeResponse.message || "User status updated successfully",
+        "success",
+      );
+      fetchUsers();
+      mergeDetailsIfOpen();
     } catch (error) {
       console.error("Error updating user status:", error);
-      showSnackbar("Error updating user status", "error");
+      showSnackbar(
+        apiErrorMessage(error) || "Error updating user status",
+        "error",
+      );
     } finally {
       setActionLoading(false);
     }
@@ -443,52 +562,57 @@ const ManageUsers = () => {
     }
   };
 
-  // Update User Stats: open modal (prefill with current totalUsers from pagination)
   const handleOpenUserStatsModal = () => {
+    setUserStatsIncrements({ addTotal: "", addNew: "" });
     setUserStatsFormError(null);
     setOpenUserStatsModal(true);
+    fetchUserStats();
   };
 
   const handleCloseUserStatsModal = () => {
     setOpenUserStatsModal(false);
     setUserStatsFormError(null);
+    setUserStatsIncrements({ addTotal: "", addNew: "" });
   };
 
   const handleUserStatsSubmit = async (e) => {
     e.preventDefault();
     setUserStatsFormError(null);
-    const total = parseInt(userStatsForm.totalUsers) || 0;
-    const newU = parseInt(userStatsForm.newUsers) || 0;
 
-    if (total === 0) {
-      setUserStatsFormError("Total users is required");
+    const parsedTotal = parseNonNegativeIncrementInput(
+      userStatsIncrements.addTotal,
+    );
+    const parsedNew = parseNonNegativeIncrementInput(
+      userStatsIncrements.addNew,
+    );
+
+    if (!parsedTotal.valid || !parsedNew.valid) {
+      setUserStatsFormError(
+        "Use whole numbers only (0 or more). A blank field is sent as 0.",
+      );
       return;
     }
-    if (Number.isNaN(total) || total < 0) {
-      setUserStatsFormError("Total users must be a non-negative integer");
-      return;
-    }
-    if (newU === 0 || newU === null) {
-      setUserStatsFormError("New users is required");
-      return;
-    }
-    if (Number.isNaN(newU) || newU < 0) {
-      setUserStatsFormError("New users must be a non-negative integer");
+
+    if (parsedTotal.delta === 0 && parsedNew.delta === 0) {
+      setUserStatsFormError(
+        "Enter a value for total users, new users, or both.",
+      );
       return;
     }
 
     try {
       setUserStatsSubmitting(true);
       const response = await tradeService.updateUserState({
-        totalUsers: total,
-        newUsers: newU,
+        totalUsers: parsedTotal.delta,
+        newUsers: parsedNew.delta,
       });
       if (response?.success) {
         showSnackbar(
           response.message || "User stats updated successfully",
           "success",
         );
-        handleCloseUserStatsModal();
+        setUserStatsIncrements({ addTotal: "", addNew: "" });
+        fetchUserStats();
         fetchUsers();
       } else {
         setUserStatsFormError(
@@ -605,6 +729,21 @@ const ManageUsers = () => {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  const incTotalParsed = parseNonNegativeIncrementInput(
+    userStatsIncrements.addTotal,
+  );
+  const incNewParsed = parseNonNegativeIncrementInput(
+    userStatsIncrements.addNew,
+  );
+  const userStatsInputsValid = incTotalParsed.valid && incNewParsed.valid;
+  const userStatsHasIncrement =
+    incTotalParsed.delta > 0 || incNewParsed.delta > 0;
+  const userStatsCanSubmit =
+    userStatsInputsValid &&
+    userStatsHasIncrement &&
+    !userStatsLoading &&
+    !userStatsSubmitting;
 
   return (
     <Box>
@@ -1813,7 +1952,7 @@ const ManageUsers = () => {
             backgroundColor: AppColors.BG_CARD,
             border: `1px solid ${AppColors.BG_SECONDARY}`,
             borderRadius: 3,
-            maxWidth: 440,
+            maxWidth: 480,
             width: "100%",
             boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
           }}
@@ -1843,6 +1982,7 @@ const ManageUsers = () => {
                 </Box>
                 <Box>
                   <Typography
+                    component="h2"
                     variant="h6"
                     sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}
                   >
@@ -1852,7 +1992,8 @@ const ManageUsers = () => {
                     variant="caption"
                     sx={{ color: AppColors.TXT_SUB }}
                   >
-                    Set total users and new users counts for dashboard stats
+                    Current counts are read-only. Enter the values to send to
+                    the server (one or both).
                   </Typography>
                 </Box>
               </Box>
@@ -1893,64 +2034,130 @@ const ManageUsers = () => {
                 </Typography>
               )}
 
-              <TextField
-                fullWidth
-                required
-                label="Total Users"
-                type="number"
-                inputProps={{ min: 0, step: 1 }}
-                placeholder="e.g. 10"
-                value={userStatsForm.totalUsers}
-                onChange={(e) =>
-                  setUserStatsForm((p) => ({
-                    ...p,
-                    totalUsers: parseInt(e.target.value) || 0,
-                  }))
-                }
-                InputProps={{
-                  sx: {
-                    bgcolor: AppColors.BG_SECONDARY,
-                    borderRadius: 2,
-                    "& fieldset": { borderColor: "transparent" },
-                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
-                    "&.Mui-focused fieldset": {
-                      borderColor: AppColors.GOLD_DARK,
-                    },
-                    "& input": { color: AppColors.TXT_MAIN },
-                  },
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: `${AppColors.BG_SECONDARY}80`,
+                  border: `1px solid ${AppColors.BG_SECONDARY}`,
                 }}
-                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
-              />
+              >
+                <Stack spacing={1}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
+                      Total users
+                    </Typography>
+                    {userStatsLoading ? (
+                      <CircularProgress size={18} sx={{ color: AppColors.GOLD_DARK }} />
+                    ) : (
+                      <Typography
+                        variant="h6"
+                        sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}
+                      >
+                        {userStatsDisplay.totalUsers.toLocaleString()}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
+                      New users
+                    </Typography>
+                    {userStatsLoading ? (
+                      <CircularProgress size={18} sx={{ color: AppColors.GOLD_DARK }} />
+                    ) : (
+                      <Typography
+                        variant="h6"
+                        sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}
+                      >
+                        {userStatsDisplay.newUsers.toLocaleString()}
+                      </Typography>
+                    )}
+                  </Box>
+                </Stack>
+              </Box>
 
-              <TextField
-                fullWidth
-                required
-                label="New Users"
-                type="number"
-                inputProps={{ min: 0, step: 1 }}
-                placeholder="e.g. 5"
-                value={userStatsForm.newUsers}
-                onChange={(e) =>
-                  setUserStatsForm((p) => ({
-                    ...p,
-                    newUsers: parseInt(e.target.value) || 0,
-                  }))
-                }
-                InputProps={{
-                  sx: {
-                    bgcolor: AppColors.BG_SECONDARY,
-                    borderRadius: 2,
-                    "& fieldset": { borderColor: "transparent" },
-                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
-                    "&.Mui-focused fieldset": {
-                      borderColor: AppColors.GOLD_DARK,
+              <Box>
+                <Typography
+                  variant="caption"
+                  sx={{ color: AppColors.TXT_SUB, fontWeight: 600, mb: 0.5 }}
+                >
+                  Total users
+                </Typography>
+                <TextField
+                  fullWidth
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={userStatsIncrements.addTotal}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "" || /^\d+$/.test(v)) {
+                      setUserStatsIncrements((p) => ({ ...p, addTotal: v }));
+                    }
+                  }}
+                  disabled={userStatsLoading || userStatsSubmitting}
+                  error={userStatsIncrements.addTotal !== "" && !incTotalParsed.valid}
+                  InputProps={{
+                    sx: {
+                      bgcolor: AppColors.BG_SECONDARY,
+                      borderRadius: 2,
+                      "& fieldset": { borderColor: "transparent" },
+                      "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                      "&.Mui-focused fieldset": {
+                        borderColor: AppColors.GOLD_DARK,
+                      },
+                      "& input": { color: AppColors.TXT_MAIN },
                     },
-                    "& input": { color: AppColors.TXT_MAIN },
-                  },
-                }}
-                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
-              />
-
+                  }}
+                />
+              </Box>
+              <Box>
+                <Typography
+                  variant="caption"
+                  sx={{ color: AppColors.TXT_SUB, fontWeight: 600, mb: 0.5 }}
+                >
+                  New users
+                </Typography>
+                <TextField
+                  fullWidth
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={userStatsIncrements.addNew}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "" || /^\d+$/.test(v)) {
+                      setUserStatsIncrements((p) => ({ ...p, addNew: v }));
+                    }
+                  }}
+                  disabled={userStatsLoading || userStatsSubmitting}
+                  error={userStatsIncrements.addNew !== "" && !incNewParsed.valid}
+                  InputProps={{
+                    sx: {
+                      bgcolor: AppColors.BG_SECONDARY,
+                      borderRadius: 2,
+                      "& fieldset": { borderColor: "transparent" },
+                      "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                      "&.Mui-focused fieldset": {
+                        borderColor: AppColors.GOLD_DARK,
+                      },
+                      "& input": { color: AppColors.TXT_MAIN },
+                    },
+                  }}
+                />
+              </Box>
               <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
                 <Button
                   fullWidth
@@ -1972,12 +2179,12 @@ const ManageUsers = () => {
                   fullWidth
                   className="btn-primary"
                   type="submit"
-                  disabled={userStatsSubmitting}
+                  disabled={!userStatsCanSubmit}
                 >
                   {userStatsSubmitting ? (
                     <CircularProgress size={22} sx={{ color: "inherit" }} />
                   ) : (
-                    "Update Stats"
+                    "Apply update"
                   )}
                 </Button>
               </Stack>

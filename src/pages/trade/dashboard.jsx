@@ -26,6 +26,86 @@ import { AppColors } from "../../constant/appColors";
 import tradeService from "../../services/tradeService";
 import BTLoader from "../../components/Loader";
 
+/** Default shape matches GET /trade/admin/dashboard `data` payload */
+const defaultDashboardData = {
+  users: {
+    totalUsers: 0,
+    activeUsers: 0,
+    blockedUsers: 0,
+    deletedUsers: 0,
+    verifiedUsers: 0,
+  },
+  balances: {
+    totalDeposited: 0,
+    totalTradedVolume: 0,
+    totalBalance: 0,
+    totalWinningBalance: 0,
+    totalWithdrawableWinnings: 0,
+    totalLockBalance: 0,
+    totalReferralIncome: 0,
+    totalLevelIncome: 0,
+    totalSalaryIncome: 0,
+    totalWorkingIncome: 0,
+  },
+  trades: {
+    totalTrades: 0,
+    openTrades: 0,
+    winTrades: 0,
+    lossTrades: 0,
+    totalGrossAmount: 0,
+    totalNetTradeAmount: 0,
+    totalFeeAmount: 0,
+  },
+  deposits: { totalAmount: 0, count: 0 },
+  withdrawals: {
+    withdrawWinnings: { totalAmount: 0, count: 0 },
+    withdrawWorking: { totalAmount: 0, count: 0 },
+  },
+  incomes: {
+    referralBonus: { totalAmount: 0, count: 0 },
+    levelIncome: { totalAmount: 0, count: 0 },
+    salaryIncome: { totalAmount: 0, count: 0 },
+    totalIncomeAmount: 0,
+  },
+};
+
+function normalizeDashboardPayload(data) {
+  if (!data || typeof data !== "object") return null;
+  return {
+    users: { ...defaultDashboardData.users, ...data.users },
+    balances: { ...defaultDashboardData.balances, ...data.balances },
+    trades: { ...defaultDashboardData.trades, ...data.trades },
+    deposits: { ...defaultDashboardData.deposits, ...data.deposits },
+    withdrawals: {
+      withdrawWinnings: {
+        ...defaultDashboardData.withdrawals.withdrawWinnings,
+        ...data.withdrawals?.withdrawWinnings,
+      },
+      withdrawWorking: {
+        ...defaultDashboardData.withdrawals.withdrawWorking,
+        ...data.withdrawals?.withdrawWorking,
+      },
+    },
+    incomes: {
+      referralBonus: {
+        ...defaultDashboardData.incomes.referralBonus,
+        ...data.incomes?.referralBonus,
+      },
+      levelIncome: {
+        ...defaultDashboardData.incomes.levelIncome,
+        ...data.incomes?.levelIncome,
+      },
+      salaryIncome: {
+        ...defaultDashboardData.incomes.salaryIncome,
+        ...data.incomes?.salaryIncome,
+      },
+      totalIncomeAmount:
+        data.incomes?.totalIncomeAmount ??
+        defaultDashboardData.incomes.totalIncomeAmount,
+    },
+  };
+}
+
 const AdminDashboard = () => {
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
@@ -35,8 +115,8 @@ const AdminDashboard = () => {
     try {
       setLoading(true);
       const response = await tradeService.getDashboard();
-      if (response.success) {
-        setDashboardData(response.data);
+      if (response.success && response.data) {
+        setDashboardData(normalizeDashboardPayload(response.data));
       } else {
         showSnackbar("Failed to load dashboard data", "error");
       }
@@ -141,10 +221,10 @@ const AdminDashboard = () => {
               <Grid size={{ xs: 6, md: 3 }}>
                 <MetricCard
                   title="Total Balance"
-                  value={`$${balances?.totalBalance.toLocaleString()}`}
+                  value={`$${(balances?.totalBalance ?? 0).toLocaleString()}`}
                   icon={<AccountBalance sx={{ fontSize: { xs: 20, sm: 28 } }} />}
                   trend="positive"
-                  subtitle={`$${balances?.totalDeposited.toLocaleString()} deposited`}
+                  subtitle={`$${(balances?.totalDeposited ?? 0).toLocaleString()} deposited`}
                 />
               </Grid>
               <Grid size={{ xs: 6, md: 3 }}>
@@ -159,7 +239,7 @@ const AdminDashboard = () => {
               <Grid size={{ xs: 6, md: 3 }}>
                 <MetricCard
                   title="Trading Volume"
-                  value={`$${balances?.totalTradedVolume.toLocaleString()}`}
+                  value={`$${(balances?.totalTradedVolume ?? 0).toLocaleString()}`}
                   icon={<ShowChart sx={{ fontSize: { xs: 20, sm: 28 } }} />}
                   trend="positive"
                   subtitle="All time volume"
@@ -376,7 +456,7 @@ const AdminDashboard = () => {
                       border: `1px solid ${AppColors.GOLD_DARK}30`
                     }}>
                       <Typography variant="h5" sx={{ color: AppColors.GOLD_DARK, fontWeight: 700 }}>
-                        ${incomes.totalIncomeAmount.toLocaleString()}
+                        ${(incomes.totalIncomeAmount ?? 0).toLocaleString()}
                       </Typography>
                       <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
                         Total Platform Income
@@ -520,7 +600,7 @@ const DashboardCard = ({ title, subtitle, children }) => (
 );
 
 // Metric Card Component
-const MetricCard = ({ title, value, icon, trend, subtitle }) => (
+const MetricCard = ({ title, value, icon, subtitle }) => (
   <Paper
     elevation={0}
     sx={{
