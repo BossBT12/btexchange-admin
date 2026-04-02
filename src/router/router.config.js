@@ -1,11 +1,23 @@
-import { Leaderboard, Person, AccountBalanceWallet, History, MonetizationOn, CandlestickChart, Settings, Telegram, AttachMoney, NotificationsNoneOutlined, CopyAllOutlined } from "@mui/icons-material";
+import {
+  Leaderboard,
+  Person,
+  AccountBalanceWallet,
+  History,
+  MonetizationOn,
+  CandlestickChart,
+  Settings,
+  Telegram,
+  AttachMoney,
+  NotificationsNoneOutlined,
+  CopyAllOutlined,
+} from "@mui/icons-material";
 import asyncComponent from "../utils/asyncComponent.jsx";
 
 export const authRouters = [
   {
     path: "/login",
     component: asyncComponent(() => import("../pages/auth/Login.jsx")),
-  }
+  },
 ];
 
 export const protectedRouters = [
@@ -21,28 +33,42 @@ export const protectedRouters = [
     inSidebarMenu: true,
     label: "Manage Users",
     icon: Person,
-    component: asyncComponent(() => import("../pages/trade/manageUser/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/trade/manageUser/index.jsx"),
+    ),
+  },
+  {
+    path: "/manage-users/:id",
+    component: asyncComponent(
+      () => import("../pages/trade/manageUser/userData.jsx"),
+    ),
   },
   {
     path: "/manage-funds",
     inSidebarMenu: true,
     label: "Manage Funds",
     icon: AccountBalanceWallet,
-    component: asyncComponent(() => import("../pages/trade/manageFund/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/trade/manageFund/index.jsx"),
+    ),
   },
   {
     path: "/manage-history-and-logs",
     inSidebarMenu: true,
     label: "Manage History & Logs",
     icon: History,
-    component: asyncComponent(() => import("../pages/trade/manageHistoryNLogs/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/trade/manageHistoryNLogs/index.jsx"),
+    ),
   },
   {
     path: "/manage-copy-trade",
     inSidebarMenu: true,
     label: "Manage Copy Trade",
     icon: CandlestickChart,
-    component: asyncComponent(() => import("../pages/trade/manageCopyTrade/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/trade/manageCopyTrade/index.jsx"),
+    ),
   },
   {
     inSidebarMenu: true,
@@ -55,7 +81,9 @@ export const protectedRouters = [
     parentLabel: "Control Center",
     label: "Telegram Links",
     icon: Telegram,
-    component: asyncComponent(() => import("../pages/trade/telegramLinks/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/trade/telegramLinks/index.jsx"),
+    ),
   },
   {
     path: "/control-center/bet-profit",
@@ -63,7 +91,9 @@ export const protectedRouters = [
     parentLabel: "Control Center",
     label: "Bet Profit",
     icon: AttachMoney,
-    component: asyncComponent(() => import("../pages/trade/betProfit/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/trade/betProfit/index.jsx"),
+    ),
   },
   {
     path: "/control-center/notifications",
@@ -71,7 +101,9 @@ export const protectedRouters = [
     parentLabel: "Control Center",
     label: "Notifications",
     icon: NotificationsNoneOutlined,
-    component: asyncComponent(() => import("../pages/trade/notifications/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/trade/notifications/index.jsx"),
+    ),
   },
 ];
 
@@ -88,36 +120,56 @@ export const protectedRouters2 = [
     inSidebarMenu: true,
     label: "Manage Users",
     icon: Person,
-    component: asyncComponent(() => import("../pages/network/manageUser/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/network/manageUser/index.jsx"),
+    ),
+  },
+  {
+    path: "/network/manage-users/:id",
+    component: asyncComponent(
+      () => import("../pages/network/manageUser/userData.jsx"),
+    ),
   },
   {
     path: "/network/manage-funds",
     inSidebarMenu: true,
     label: "Manage Funds",
     icon: AccountBalanceWallet,
-    component: asyncComponent(() => import("../pages/network/manageFund/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/network/manageFund/index.jsx"),
+    ),
   },
   {
     path: "/network/manage-finance",
     inSidebarMenu: true,
     label: "Manage Finance",
     icon: MonetizationOn,
-    component: asyncComponent(() => import("../pages/network/manageFinance/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/network/manageFinance/index.jsx"),
+    ),
   },
   {
     path: "/network/manage-trade-history",
     inSidebarMenu: true,
     label: "Manage Trade History",
     icon: CandlestickChart,
-    component: asyncComponent(() => import("../pages/network/ManageTradeHistory/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/network/ManageTradeHistory/index.jsx"),
+    ),
   },
   {
     path: "/network/roi-settings",
     inSidebarMenu: true,
     label: "ROI Settings",
     icon: Settings,
-    component: asyncComponent(() => import("../pages/network/roiSettings/index.jsx")),
+    component: asyncComponent(
+      () => import("../pages/network/roiSettings/index.jsx"),
+    ),
   },
 ];
 
-export const routers = [...authRouters, ...protectedRouters, ...protectedRouters2];
+export const routers = [
+  ...authRouters,
+  ...protectedRouters,
+  ...protectedRouters2,
+];

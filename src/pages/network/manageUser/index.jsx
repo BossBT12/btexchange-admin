@@ -23,11 +23,14 @@ import {
   CardContent,
   Button,
   Grid,
-  Divider,
   Avatar,
   Stack,
   Tooltip,
   CircularProgress,
+  Menu,
+  MenuItem as ActionMenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   Search,
@@ -41,16 +44,19 @@ import {
   ArrowDownward,
   AccountBalanceWallet,
   Edit,
+  MoreVert,
 } from "@mui/icons-material";
 import { AppColors } from "../../../constant/appColors";
 import useSnackbar from "../../../hooks/useSnackbar";
 import networkService from "../../../services/networkService";
 import BTLoader from "../../../components/Loader";
 import tradeService from "../../../services/tradeService";
+import { FONT_SIZE } from "../../../constant/lookUpConstant";
+import { useNavigate } from "react-router-dom";
 
 const NetworkManageUsers = () => {
   const { showSnackbar } = useSnackbar();
-
+  const navigate = useNavigate();
   // Table state
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -68,6 +74,7 @@ const NetworkManageUsers = () => {
   const [userDetails, setUserDetails] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+  const [userModalMenuAnchor, setUserModalMenuAnchor] = useState(null);
 
   // Action state
   const [actionLoading, setActionLoading] = useState(false);
@@ -185,6 +192,7 @@ const NetworkManageUsers = () => {
   // Handle modal close
   const handleModalClose = () => {
     setModalOpen(false);
+    setUserModalMenuAnchor(null);
     setUserDetails(null);
     setEmailEditMode(false);
     setEmailDraft("");
@@ -701,10 +709,18 @@ const NetworkManageUsers = () => {
                       <TableCell>
                         <Typography
                           variant="body2"
+                          onClick={() =>
+                            navigate(`/network/manage-users/${user._id}`)
+                          }
                           sx={{
                             color: AppColors.GOLD_DARK,
                             fontFamily: "monospace",
                             fontWeight: 600,
+                            cursor: "pointer",
+                            "&:hover": {
+                              textDecoration: "underline",
+                              color: AppColors.GOLD_DARK,
+                            },
                           }}
                         >
                           {user.UID}
@@ -836,15 +852,106 @@ const NetworkManageUsers = () => {
                 alignItems: "center",
               }}
             >
-              <Typography
-                variant="h6"
-                sx={{
-                  color: AppColors.GOLD_DARK,
-                  fontWeight: 700,
-                }}
-              >
-                User Details
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: AppColors.GOLD_DARK,
+                    fontWeight: 700,
+                  }}
+                >
+                  User Details
+                </Typography>
+                {userDetails && (
+                  <>
+                    <Tooltip title="More actions">
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={(e) =>
+                            setUserModalMenuAnchor(e.currentTarget)
+                          }
+                          disabled={modalLoading}
+                          sx={{ color: AppColors.TXT_SUB }}
+                        >
+                          <MoreVert />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Menu
+                      anchorEl={userModalMenuAnchor}
+                      open={Boolean(userModalMenuAnchor)}
+                      onClose={() => setUserModalMenuAnchor(null)}
+                      anchorOrigin={{
+                        vertical: "bottom",
+                        horizontal: "right",
+                      }}
+                      transformOrigin={{
+                        vertical: "top",
+                        horizontal: "right",
+                      }}
+                      slotProps={{
+                        paper: {
+                          sx: {
+                            border: `1px solid ${AppColors.BG_SECONDARY}`,
+                            bgcolor: AppColors.BG_CARD,
+                          },
+                        },
+                      }}
+                    >
+                      <ActionMenuItem
+                        onClick={() => {
+                          setUserModalMenuAnchor(null);
+                          const isCurrentlyBlocked =
+                            userDetails.user?.isBlocked ||
+                            userDetails.isBlocked;
+                          const isBlocked = !isCurrentlyBlocked;
+                          updateUserStatus(userDetails?.user?.UID, isBlocked);
+                        }}
+                        disabled={actionLoading}
+                        sx={{
+                          color:
+                            userDetails.user?.isBlocked || userDetails.isBlocked
+                              ? AppColors.SUCCESS
+                              : AppColors.ERROR,
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          {userDetails.user?.isBlocked ||
+                          userDetails.isBlocked ? (
+                            <Check
+                              fontSize="small"
+                              sx={{ color: AppColors.SUCCESS }}
+                            />
+                          ) : (
+                            <Block
+                              fontSize="small"
+                              sx={{ color: AppColors.ERROR }}
+                            />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            userDetails.user?.isBlocked || userDetails.isBlocked
+                              ? "Unblock User"
+                              : "Block User"
+                          }
+                          slotProps={{
+                            primary: {
+                              sx: {
+                                fontWeight: 600,
+                                fontSize: FONT_SIZE.BODY,
+                              },
+                            },
+                          }}
+                        />
+                      </ActionMenuItem>
+                    </Menu>
+                    {actionLoading && <CircularProgress size={20} />}
+                  </>
+                )}
+              </Box>
+
               <IconButton
                 onClick={handleModalClose}
                 sx={{
@@ -959,67 +1066,6 @@ const NetworkManageUsers = () => {
                     </Grid>
                   </Box>
                 )}
-
-                {/* Action Buttons */}
-                <Divider
-                  sx={{
-                    my: { xs: 1, md: 1.5 },
-                    borderColor: AppColors.BG_SECONDARY,
-                  }}
-                />
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: { xs: 1, md: 1.5 },
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                  }}
-                >
-                  {/* Block/Unblock Button */}
-                  <Button
-                    variant="outlined"
-                    startIcon={
-                      userDetails.user?.isBlocked || userDetails.isBlocked ? (
-                        <Check />
-                      ) : (
-                        <Block />
-                      )
-                    }
-                    onClick={() => {
-                      const isBlocked = !(
-                        userDetails.user?.isBlocked || userDetails.isBlocked
-                      );
-                      updateUserStatus(userDetails?.user?.UID, isBlocked);
-                    }}
-                    disabled={actionLoading}
-                    sx={{
-                      borderColor:
-                        userDetails.user?.isBlocked || userDetails.isBlocked
-                          ? AppColors.SUCCESS
-                          : AppColors.ERROR,
-                      color:
-                        userDetails.user?.isBlocked || userDetails.isBlocked
-                          ? AppColors.SUCCESS
-                          : AppColors.ERROR,
-                      "&:hover": {
-                        borderColor:
-                          userDetails.user?.isBlocked || userDetails.isBlocked
-                            ? AppColors.SUCCESS
-                            : AppColors.ERROR,
-                        backgroundColor:
-                          userDetails.user?.isBlocked || userDetails.isBlocked
-                            ? `${AppColors.SUCCESS}10`
-                            : `${AppColors.ERROR}10`,
-                      },
-                    }}
-                  >
-                    {userDetails.user?.isBlocked || userDetails.isBlocked
-                      ? "Unblock User"
-                      : "Block User"}
-                  </Button>
-
-                  {actionLoading && <CircularProgress size={20} />}
-                </Box>
               </>
             ) : (
               <Box sx={{ textAlign: "center", py: 4 }}>

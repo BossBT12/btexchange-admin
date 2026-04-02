@@ -63,12 +63,12 @@ export default function LoginTrade() {
         }
       } catch (err) {
         console.error("❌ Admin login failed:", err);
-        showSnackbar(
-          err.response?.data?.message ||
-            err.message ||
-            "Login failed. Please try again.",
-          "error",
-        );
+        const message =
+          (err && typeof err === "object" && err.message) ||
+          err?.response?.data?.message ||
+          (typeof err === "string" ? err : null) ||
+          "Login failed. Please try again.";
+        showSnackbar(message, "error");
       } finally {
         setLoading(false);
       }

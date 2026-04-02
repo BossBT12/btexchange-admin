@@ -23,11 +23,14 @@ import {
   CardContent,
   Button,
   Grid,
-  Divider,
   Avatar,
   Stack,
   Tooltip,
   CircularProgress,
+  Menu,
+  MenuItem as ActionMenuItem,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import {
   Search,
@@ -45,6 +48,7 @@ import {
   Update,
   Paid,
   Edit,
+  MoreVert,
 } from "@mui/icons-material";
 import { AppColors } from "../../../constant/appColors";
 import useSnackbar from "../../../hooks/useSnackbar";
@@ -53,6 +57,7 @@ import BTLoader from "../../../components/Loader";
 import DatePicker from "../../../components/input/datePicker";
 import { FONT_SIZE } from "../../../constant/lookUpConstant";
 import networkService from "../../../services/networkService";
+import { useNavigate } from "react-router-dom";
 
 /** Empty string = no change (0 added). Digits only while typing. */
 function parseNonNegativeIncrementInput(raw) {
@@ -64,7 +69,7 @@ function parseNonNegativeIncrementInput(raw) {
 
 const ManageUsers = () => {
   const { showSnackbar } = useSnackbar();
-
+  const navigate = useNavigate();
   // Table state
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -83,6 +88,7 @@ const ManageUsers = () => {
   const [userDetails, setUserDetails] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
+  const [userModalMenuAnchor, setUserModalMenuAnchor] = useState(null);
 
   // Action state
   const [actionLoading, setActionLoading] = useState(false);
@@ -349,6 +355,7 @@ const ManageUsers = () => {
   // Handle modal close
   const handleModalClose = () => {
     setModalOpen(false);
+    setUserModalMenuAnchor(null);
     setUserDetails(null);
     setEmailEditMode(false);
     setEmailDraft("");
@@ -1029,10 +1036,16 @@ const ManageUsers = () => {
                       <TableCell>
                         <Typography
                           variant="body2"
+                          onClick={() => navigate(`/manage-users/${user._id}`)}
                           sx={{
                             color: AppColors.GOLD_DARK,
                             fontFamily: "monospace",
                             fontWeight: 600,
+                            cursor: "pointer",
+                            "&:hover": {
+                              textDecoration: "underline",
+                              color: AppColors.GOLD_DARK,
+                            },
                           }}
                         >
                           {user.UID}
@@ -1163,15 +1176,101 @@ const ManageUsers = () => {
                 alignItems: "center",
               }}
             >
-              <Typography
-                variant="h6"
-                sx={{
-                  color: AppColors.GOLD_DARK,
-                  fontWeight: 700,
-                }}
-              >
-                User Details
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: AppColors.GOLD_DARK,
+                    fontWeight: 700,
+                  }}
+                >
+                  User Details
+                </Typography>
+                {userDetails && (
+                  <>
+                    <Tooltip title="More actions">
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={(e) =>
+                            setUserModalMenuAnchor(e.currentTarget)
+                          }
+                          disabled={modalLoading || userDetails.isDeleted}
+                          sx={{ color: AppColors.TXT_SUB }}
+                        >
+                          <MoreVert />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Menu
+                      anchorEl={userModalMenuAnchor}
+                      open={Boolean(userModalMenuAnchor)}
+                      onClose={() => setUserModalMenuAnchor(null)}
+                      anchorOrigin={{
+                        vertical: "bottom",
+                        horizontal: "right",
+                      }}
+                      transformOrigin={{
+                        vertical: "top",
+                        horizontal: "right",
+                      }}
+                      slotProps={{
+                        paper: {
+                          sx: {
+                            border: `1px solid ${AppColors.BG_SECONDARY}`,
+                            bgcolor: AppColors.BG_CARD,
+                          },
+                        },
+                      }}
+                    >
+                      <ActionMenuItem
+                        onClick={() => {
+                          setUserModalMenuAnchor(null);
+                          updateUserStatus(userDetails.UID, {
+                            isBlocked: !userDetails.isBlocked,
+                          });
+                        }}
+                        disabled={actionLoading || userDetails.isDeleted}
+                        sx={{
+                          color: userDetails.isBlocked
+                            ? AppColors.SUCCESS
+                            : AppColors.ERROR,
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          {userDetails.isBlocked ? (
+                            <Check
+                              fontSize="small"
+                              sx={{ color: AppColors.SUCCESS }}
+                            />
+                          ) : (
+                            <Block
+                              fontSize="small"
+                              sx={{ color: AppColors.ERROR }}
+                            />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            userDetails.isBlocked
+                              ? "Unblock User"
+                              : "Block User"
+                          }
+                          slotProps={{
+                            primary: {
+                              sx: {
+                                fontWeight: 600,
+                                fontSize: FONT_SIZE.BODY,
+                              },
+                            },
+                          }}
+                        />
+                      </ActionMenuItem>
+                    </Menu>
+                    {actionLoading && <CircularProgress size={20} />}
+                  </>
+                )}
+              </Box>
               <IconButton
                 onClick={handleModalClose}
                 sx={{
@@ -1383,96 +1482,6 @@ const ManageUsers = () => {
                       />
                     </Grid>
                   </Grid>
-                </Box>
-
-                {/* Action Buttons */}
-                <Divider
-                  sx={{
-                    my: { xs: 1, md: 1.5 },
-                    borderColor: AppColors.BG_SECONDARY,
-                  }}
-                />
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: { xs: 1, md: 1.5 },
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                  }}
-                >
-                  {/* Block/Unblock Button */}
-                  <Button
-                    variant="outlined"
-                    startIcon={
-                      userDetails.isBlocked ? (
-                        <Check fontSize="small" />
-                      ) : (
-                        <Block fontSize="small" />
-                      )
-                    }
-                    onClick={() =>
-                      updateUserStatus(userDetails.UID, {
-                        isBlocked: !userDetails.isBlocked,
-                      })
-                    }
-                    disabled={actionLoading || userDetails.isDeleted}
-                    sx={{
-                      borderColor: userDetails.isBlocked
-                        ? AppColors.SUCCESS
-                        : AppColors.ERROR,
-                      color: userDetails.isBlocked
-                        ? AppColors.SUCCESS
-                        : AppColors.ERROR,
-                      "&:hover": {
-                        borderColor: userDetails.isBlocked
-                          ? AppColors.SUCCESS
-                          : AppColors.ERROR,
-                        backgroundColor: userDetails.isBlocked
-                          ? `${AppColors.SUCCESS}10`
-                          : `${AppColors.ERROR}10`,
-                      },
-                    }}
-                  >
-                    {userDetails.isBlocked ? "Unblock User" : "Block User"}
-                  </Button>
-
-                  {/* Delete/Restore Button */}
-                  <Button
-                    variant="outlined"
-                    startIcon={
-                      userDetails.isDeleted ? (
-                        <Restore fontSize="small" />
-                      ) : (
-                        <Delete fontSize="small" />
-                      )
-                    }
-                    onClick={() =>
-                      updateUserStatus(userDetails.UID, {
-                        isDeleted: !userDetails.isDeleted,
-                      })
-                    }
-                    disabled={actionLoading}
-                    sx={{
-                      borderColor: userDetails.isDeleted
-                        ? AppColors.SUCCESS
-                        : AppColors.ERROR,
-                      color: userDetails.isDeleted
-                        ? AppColors.SUCCESS
-                        : AppColors.ERROR,
-                      "&:hover": {
-                        borderColor: userDetails.isDeleted
-                          ? AppColors.SUCCESS
-                          : AppColors.ERROR,
-                        backgroundColor: userDetails.isDeleted
-                          ? `${AppColors.SUCCESS}10`
-                          : `${AppColors.ERROR}10`,
-                      },
-                    }}
-                  >
-                    {userDetails.isDeleted ? "Restore User" : "Delete User"}
-                  </Button>
-
-                  {actionLoading && <CircularProgress size={20} />}
                 </Box>
               </>
             ) : (
@@ -2050,11 +2059,17 @@ const ManageUsers = () => {
                       alignItems: "center",
                     }}
                   >
-                    <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: AppColors.TXT_SUB }}
+                    >
                       Total users
                     </Typography>
                     {userStatsLoading ? (
-                      <CircularProgress size={18} sx={{ color: AppColors.GOLD_DARK }} />
+                      <CircularProgress
+                        size={18}
+                        sx={{ color: AppColors.GOLD_DARK }}
+                      />
                     ) : (
                       <Typography
                         variant="h6"
@@ -2071,11 +2086,17 @@ const ManageUsers = () => {
                       alignItems: "center",
                     }}
                   >
-                    <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: AppColors.TXT_SUB }}
+                    >
                       New users
                     </Typography>
                     {userStatsLoading ? (
-                      <CircularProgress size={18} sx={{ color: AppColors.GOLD_DARK }} />
+                      <CircularProgress
+                        size={18}
+                        sx={{ color: AppColors.GOLD_DARK }}
+                      />
                     ) : (
                       <Typography
                         variant="h6"
@@ -2108,7 +2129,9 @@ const ManageUsers = () => {
                     }
                   }}
                   disabled={userStatsLoading || userStatsSubmitting}
-                  error={userStatsIncrements.addTotal !== "" && !incTotalParsed.valid}
+                  error={
+                    userStatsIncrements.addTotal !== "" && !incTotalParsed.valid
+                  }
                   InputProps={{
                     sx: {
                       bgcolor: AppColors.BG_SECONDARY,
@@ -2143,7 +2166,9 @@ const ManageUsers = () => {
                     }
                   }}
                   disabled={userStatsLoading || userStatsSubmitting}
-                  error={userStatsIncrements.addNew !== "" && !incNewParsed.valid}
+                  error={
+                    userStatsIncrements.addNew !== "" && !incNewParsed.valid
+                  }
                   InputProps={{
                     sx: {
                       bgcolor: AppColors.BG_SECONDARY,
