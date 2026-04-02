@@ -39,37 +39,42 @@ function pickStat(obj, keys) {
   return undefined;
 }
 
-/** Match reference: `$ 0.000000` style, always six decimal places for numeric stats */
-function formatStatValue(val) {
+/** Format numeric values and honor currency-only fields */
+function formatStatValue(val, isCurrency = false) {
   if (val === undefined || val === null || val === "") return "0";
   if (typeof val === "boolean") return val ? "Yes" : "No";
   const s = String(val).trim();
   const n = Number(s);
   if (!Number.isNaN(n) && s !== "" && /^-?\d/.test(s)) {
-    const fixed = n.toLocaleString("en-US", {
-      minimumFractionDigits: 6,
-      maximumFractionDigits: 6,
-    });
-    return `$ ${fixed}`;
+    if (isCurrency) {
+      const fixed = n.toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+      return `$ ${fixed}`;
+    }
+    return n;
   }
   return String(val);
 }
 
 const PERSONAL_FIELDS = [
-  { label: "Total deposit", keys: ["totalDeposit", "totalDeposited"] },
-  { label: "Today deposit", keys: ["todayDeposit"] },
-  { label: "Total trade", keys: ["totalTradedVolume"] },
-  { label: "Today trade", keys: ["todayTrade"] },
-  { label: "Total withdraw", keys: ["totalWithdraw", "totalWithdrawal"] },
-  { label: "Today withdraw", keys: ["todayWithdraw"] },
   {
-    label: "Total withdraw balance",
-    keys: ["totalWithdrawBalance", "totalWithdrawalBalance"],
+    label: "Total deposit",
+    keys: ["todayDeposit", "totalDeposited"],
+    isCurrency: true,
   },
-  { label: "Total salary", keys: ["totalSalary"] },
-  { label: "Today salary", keys: ["todaySalary"] },
-  { label: "Total self trade", keys: ["totalSelfTrade"] },
-  { label: "Today self trade", keys: ["todaySelfTrade"] },
+  { label: "Today deposit", keys: ["todayDirect"], isCurrency: true },
+  { label: "Total trade", keys: ["totalTradedVolume"] },
+  { label: "Today trade", keys: ["todayTradeVolume"] },
+  {
+    label: "Total withdraw",
+    keys: ["totalWithdraw", "totalWithdrawal"],
+    isCurrency: true,
+  },
+  { label: "Today withdraw", keys: ["todayWithdraw"], isCurrency: true },
+  { label: "Total salary", keys: ["salaryIncome"], isCurrency: true },
+  { label: "Today salary", keys: ["todaySalary"], isCurrency: true },
 ];
 
 const TEAM_FIELDS = [
@@ -77,19 +82,46 @@ const TEAM_FIELDS = [
   { label: "Today team trade", keys: ["todayTeamTrade"] },
   { label: "Total direct", keys: ["totalDirect"] },
   { label: "Today direct", keys: ["todayDirect"] },
-  { label: "Total direct business", keys: ["totalDirectBusiness"] },
-  { label: "Today direct business", keys: ["todayDirectBusiness"] },
+  {
+    label: "Total direct business",
+    keys: ["totalDirectBusiness"],
+    isCurrency: true,
+  },
+  {
+    label: "Today direct business",
+    keys: ["todayDirectBusiness"],
+    isCurrency: true,
+  },
   { label: "Total team", keys: ["totalTeam"] },
   { label: "Today team", keys: ["todayTeam"] },
-  { label: "Total team business", keys: ["totalTeamBusiness"] },
-  { label: "Today team business", keys: ["todayTeamBusiness"] },
-  { label: "Total team salary", keys: ["totalTeamSalary"] },
-  { label: "Today team salary", keys: ["todayTeamSalary"] },
-  { label: "Total team withdrawal", keys: ["totalTeamWithdrawal"] },
-  { label: "Today team withdrawal", keys: ["todayTeamWithdrawal"] },
+  {
+    label: "Total team business",
+    keys: ["totalTeamBusiness"],
+    isCurrency: true,
+  },
+  {
+    label: "Today team business",
+    keys: ["todayTeamBusiness"],
+    isCurrency: true,
+  },
+
+  { label: "Total team salary", keys: ["totalTeamSalary"], isCurrency: true },
+  { label: "Today team salary", keys: ["todayTeamSalary"], isCurrency: true },
+
+  {
+    label: "Total team withdrawal",
+    keys: ["totalTeamWithdrawal"],
+    isCurrency: true,
+  },
+  {
+    label: "Today team withdrawal",
+    keys: ["todayTeamWithdrawal"],
+    isCurrency: true,
+  },
   {
     label: "Total team withdrawal balance",
     keys: ["totalTeamWithdrawalBalance"],
+    isCurrency: true,
   },
 ];
 
@@ -120,7 +152,7 @@ function InfoList({ fields, merged }) {
         overflow: "hidden",
       }}
     >
-      {fields.map(({ label, keys }, index) => (
+      {fields.map(({ label, keys, isCurrency }, index) => (
         <Box
           key={label}
           sx={{
@@ -153,7 +185,7 @@ function InfoList({ fields, merged }) {
               flexShrink: 0,
             }}
           >
-            {formatStatValue(pickStat(merged, keys))}
+            {formatStatValue(pickStat(merged, keys), isCurrency)}
           </Typography>
         </Box>
       ))}
@@ -176,7 +208,10 @@ const UserData = () => {
 
       if (response.success) {
         const userData = response.data;
-        setUserDetails(userData);
+        console.log("userData: ", userData);
+        const merged = mergeUserPayload(userData);
+        console.log("merged: ", merged);
+        setUserDetails(merged);
       } else {
         showSnackbar("Failed to fetch user details", "error");
       }
@@ -192,16 +227,17 @@ const UserData = () => {
     fetchUserDetails();
   }, [fetchUserDetails]);
 
-  const merged = useMemo(() => mergeUserPayload(userDetails), [userDetails]);
-  console.log('merged: ', merged);
-
   const displayName = useMemo(() => {
     const n =
-      merged.fullName || merged.name || merged.username || merged.email || "";
+      userDetails?.fullName ||
+      userDetails?.name ||
+      userDetails?.username ||
+      userDetails?.email ||
+      "";
     return n || "User";
-  }, [merged]);
+  }, [userDetails]);
 
-  const displayUid = merged.UID || merged.uid || id || "—";
+  const displayUid = userDetails?.UID || userDetails?.uid || id || "—";
 
   return (
     <Box
@@ -268,7 +304,7 @@ const UserData = () => {
             }}
           >
             <SectionTitle title="Personal data" />
-            <InfoList fields={PERSONAL_FIELDS} merged={merged} />
+            <InfoList fields={PERSONAL_FIELDS} merged={userDetails} />
           </Paper>
           <Paper
             elevation={2}
@@ -281,7 +317,7 @@ const UserData = () => {
             }}
           >
             <SectionTitle title="Personal team data" />
-            <InfoList fields={TEAM_FIELDS} merged={merged} />
+            <InfoList fields={TEAM_FIELDS} merged={userDetails} />
           </Paper>
         </Stack>
       ) : (
