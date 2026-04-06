@@ -10,6 +10,15 @@ const authService = {
     const response = await networkApi.post(`/admin/signin`, credentials);
     return response?.data;
   },
+  changePassword: async (credentials) => {
+    const response = await api.post(`/trade/admin/change-password`, credentials);
+    console.log('response: ', response);
+    return response?.data;
+  },
+  changePasswordNetwork: async (credentials) => {
+    const response = await networkApi.post(`/admin/change-password`, credentials);
+    return response?.data;
+  },
 };
 
 export default authService;

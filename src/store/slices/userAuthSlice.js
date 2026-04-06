@@ -20,6 +20,7 @@ const userAuthSlice = createSlice({
     },
     setUserData: (state, action) => {
       state.userData = action.payload.userData;
+      localStorage.setItem('userData', JSON.stringify(action.payload.userData));
       state.token = action.payload.token;
       state.token2 = action.payload.token2;
     },

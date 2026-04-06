@@ -44,6 +44,10 @@ export const protectedRouters = [
     ),
   },
   {
+    path: "/profile",
+    component: asyncComponent(() => import("../pages/profilePage.jsx")),
+  },
+  {
     path: "/manage-funds",
     inSidebarMenu: true,
     label: "Manage Funds",

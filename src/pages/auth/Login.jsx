@@ -50,9 +50,14 @@ export default function LoginTrade() {
 
         const { Data: tradeData, message: tradeMessage } = tradeResponse || {};
         const { data: networkData } = networkResponse || {};
-
+        const userData = {
+          email : tradeData?.email,
+          balance : tradeData?.Balance,
+          walletAddress: tradeData?.walletAddress,
+          createdAt: tradeData?.createdAt,
+        };
         if (tradeData?.token && networkData?.token) {
-          setUser(tradeData.user, tradeData.token, networkData.token);
+          setUser(userData, tradeData.token, networkData.token);
           showSnackbar(tradeMessage || "Login successful", "success");
           navigate("/");
         } else {

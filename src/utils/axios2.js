@@ -37,9 +37,8 @@ networkApi.interceptors.response.use(
       window.location.replace("/login");
       localStorage.clear();
       Cookies.remove("token2");
-
-      return Promise.reject(error?.response?.data || error);
     }
+    return Promise.reject(error?.response?.data || error);
   },
 );
 
