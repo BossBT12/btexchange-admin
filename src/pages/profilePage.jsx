@@ -180,7 +180,6 @@ export default function ProfilePage() {
           return;
         }
       } catch (e) {
-        console.log('e: ', e);
         showSnackbar(e?.message || e?.data?.message || "Failed to update password", "error");
       } finally {
         setSubmitting(false);
