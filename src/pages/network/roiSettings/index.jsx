@@ -21,7 +21,7 @@ import useSnackbar from '../../../hooks/useSnackbar';
 import networkService from '../../../services/networkService';
 
 const ROI_MIN = 0.1;
-const ROI_MAX = 100;
+const ROI_MAX = 3;
 
 const RoiSettingsPage = () => {
     const { showSnackbar } = useSnackbar();

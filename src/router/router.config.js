@@ -152,15 +152,15 @@ export const protectedRouters2 = [
       () => import("../pages/network/manageFinance/index.jsx"),
     ),
   },
-  {
-    path: "/network/manage-trade-history",
-    inSidebarMenu: true,
-    label: "Manage Trade History",
-    icon: CandlestickChart,
-    component: asyncComponent(
-      () => import("../pages/network/ManageTradeHistory/index.jsx"),
-    ),
-  },
+  // {
+  //   path: "/network/manage-trade-history",
+  //   inSidebarMenu: true,
+  //   label: "Manage Trade History",
+  //   icon: CandlestickChart,
+  //   component: asyncComponent(
+  //     () => import("../pages/network/ManageTradeHistory/index.jsx"),
+  //   ),
+  // },
   {
     path: "/network/roi-settings",
     inSidebarMenu: true,

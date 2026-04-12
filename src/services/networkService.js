@@ -76,6 +76,11 @@ const networkService = {
     const response = await networkApi.post(`${BASE_URL}/deposit/user`, body);
     return response.data;
   },
+  ///user/capital/reduce
+  reduceUserCapital: async (body) => {
+    const response = await networkApi.post(`${BASE_URL}/user/capital/reduce`, body);
+    return response.data;
+  },
   createTradeHistory: async (body) => {
     const response = await networkApi.post(`${BASE_URL}/trade-data`, body);
     return response.data;

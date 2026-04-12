@@ -4,21 +4,17 @@ import {
   Box,
   CircularProgress,
   Grid,
-  LinearProgress,
   Divider,
   Paper,
 } from "@mui/material";
-import { useTheme } from "@mui/material/styles";
 import {
   TrendingUp,
   AccountBalance,
   SwapHoriz,
-  MonetizationOn,
   Savings,
   Group,
   VerifiedUser,
   Block,
-  ShowChart,
   Person,
 } from "@mui/icons-material";
 import useSnackbar from "../../hooks/useSnackbar";
@@ -26,7 +22,6 @@ import { AppColors } from "../../constant/appColors";
 import networkService from "../../services/networkService";
 
 const NetworkDashboard = () => {
-  const theme = useTheme();
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
@@ -45,7 +40,7 @@ const NetworkDashboard = () => {
         console.error("Error fetching dashboard:", error);
         showSnackbar(
           error.response?.data?.message || "Failed to load dashboard data",
-          "error"
+          "error",
         );
       } finally {
         setLoading(false);
@@ -63,7 +58,7 @@ const NetworkDashboard = () => {
           justifyContent: "center",
           alignItems: "center",
           minHeight: "60vh",
-          bgcolor: AppColors.BG_MAIN
+          bgcolor: AppColors.BG_MAIN,
         }}
       >
         <CircularProgress sx={{ color: AppColors.GOLD_DARK }} />
@@ -74,19 +69,23 @@ const NetworkDashboard = () => {
   if (!dashboardData) {
     return (
       <Box sx={{ p: 3, bgcolor: AppColors.BG_MAIN, minHeight: "100vh" }}>
-        <Typography variant="h6" sx={{ color: AppColors.TXT_MAIN, textAlign: "center" }}>
+        <Typography
+          variant="h6"
+          sx={{ color: AppColors.TXT_MAIN, textAlign: "center" }}
+        >
           No dashboard data available
         </Typography>
       </Box>
     );
   }
 
-  const { users, investments, wallets, transactions } = dashboardData;
+  const { users, investments, wallets, transactions, incomes } = dashboardData;
 
   // Calculate percentages and metrics
   const userStats = {
     activePercentage: users.total > 0 ? (users.active / users.total) * 100 : 0,
-    blockedPercentage: users.total > 0 ? (users.blocked / users.total) * 100 : 0,
+    blockedPercentage:
+      users.total > 0 ? (users.blocked / users.total) * 100 : 0,
   };
 
   return (
@@ -100,9 +99,9 @@ const NetworkDashboard = () => {
             color: AppColors.TXT_MAIN,
             mb: 1,
             background: `linear-gradient(45deg, ${AppColors.GOLD_DARK}, ${AppColors.GOLD_LIGHT})`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            backgroundClip: "text",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
           }}
         >
           Network Admin Dashboard
@@ -111,34 +110,33 @@ const NetworkDashboard = () => {
           variant="body1"
           sx={{
             color: AppColors.TXT_SUB,
-            fontWeight: 400
+            fontWeight: 400,
           }}
         >
-          Comprehensive overview of network platform performance and user analytics
+          Comprehensive overview of network platform performance and user
+          analytics
         </Typography>
       </Box>
 
       {/* Key Metrics Overview */}
       <Grid container spacing={3} sx={{ mb: { xs: 2, md: 4 } }}>
-        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 4 }}>
           <MetricCard
             title="Total Users"
             value={users.total}
             icon={<Person sx={{ fontSize: { xs: 20, sm: 28 } }} />}
-            trend="positive"
             subtitle={`${users.active} active`}
           />
         </Grid>
-        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 4 }}>
           <MetricCard
             title="Total Investments"
             value={investments.total}
             icon={<AccountBalance sx={{ fontSize: { xs: 20, sm: 28 } }} />}
-            trend="positive"
             subtitle={`$${investments.totalAmount.toLocaleString()}`}
           />
         </Grid>
-        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+        {/* <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <MetricCard
             title="Main Balance"
             value={`$${wallets.totalMainBalance.toLocaleString()}`}
@@ -146,13 +144,12 @@ const NetworkDashboard = () => {
             trend="positive"
             subtitle="Total platform balance"
           />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+        </Grid> */}
+        <Grid size={{ xs: 12, sm: 12, md: 4 }}>
           <MetricCard
             title="Withdrawable"
             value={`$${wallets.totalWithdrawable.toLocaleString()}`}
             icon={<Savings sx={{ fontSize: { xs: 20, sm: 28 } }} />}
-            trend="positive"
             subtitle="Available for withdrawal"
           />
         </Grid>
@@ -197,7 +194,9 @@ const NetworkDashboard = () => {
                 <UserStatItem
                   label="New Today"
                   value={users.newToday}
-                  percentage={users.total > 0 ? (users.newToday / users.total) * 100 : 0}
+                  percentage={
+                    users.total > 0 ? (users.newToday / users.total) * 100 : 0
+                  }
                   color={AppColors.GOLD_DARK}
                   icon={<TrendingUp />}
                 />
@@ -211,18 +210,36 @@ const NetworkDashboard = () => {
             title="Investment Overview"
             subtitle="Platform investment statistics"
           >
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 2, md: 3 } }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: { xs: 2, md: 3 },
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <Box>
-                  <Typography variant="h3" sx={{ color: AppColors.GOLD_DARK, fontWeight: 700 }}>
+                  <Typography
+                    variant="h3"
+                    sx={{ color: AppColors.GOLD_DARK, fontWeight: 700 }}
+                  >
                     {investments.total}
                   </Typography>
                   <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
                     Total Investments
                   </Typography>
                 </Box>
-                <Box sx={{ textAlign: 'right' }}>
-                  <Typography variant="h4" sx={{ color: AppColors.SUCCESS, fontWeight: 700 }}>
+                <Box sx={{ textAlign: "right" }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ color: AppColors.SUCCESS, fontWeight: 700 }}
+                  >
                     ${investments.totalAmount.toLocaleString()}
                   </Typography>
                   <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
@@ -280,14 +297,14 @@ const NetworkDashboard = () => {
             <Divider sx={{ my: 3, borderColor: AppColors.BG_SECONDARY }} />
 
             <Grid container spacing={3}>
-              <Grid size={{ xs: 6, md: 4 }}>
+              {/* <Grid size={{ xs: 6, md: 4 }}>
                 <FinancialMetric
                   label="Main Balance"
                   value={wallets.totalMainBalance}
                   count={null}
                   color={AppColors.GOLD_DARK}
                 />
-              </Grid>
+              </Grid> */}
               <Grid size={{ xs: 6, md: 4 }}>
                 <FinancialMetric
                   label="Withdrawable"
@@ -296,10 +313,26 @@ const NetworkDashboard = () => {
                   color={AppColors.SUCCESS}
                 />
               </Grid>
-              <Grid size={{ xs: 6, md: 4 }}>
+              {/* <Grid size={{ xs: 6, md: 4 }}>
                 <FinancialMetric
                   label="Net Balance"
                   value={wallets.totalMainBalance - wallets.totalWithdrawable}
+                  count={null}
+                  color={AppColors.TXT_SUB}
+                />
+              </Grid> */}
+              <Grid size={{ xs: 6, md: 4 }}>
+                <FinancialMetric
+                  label="Yesterday deposit"
+                  value={transactions?.yesterday?.deposits?.total}
+                  count={null}
+                  color={AppColors.TXT_SUB}
+                />
+              </Grid>
+              <Grid size={{ xs: 6, md: 4 }}>
+                <FinancialMetric
+                  label="Yesterday withdraw"
+                  value={transactions?.yesterday?.withdrawals?.total}
                   count={null}
                   color={AppColors.TXT_SUB}
                 />
@@ -313,7 +346,7 @@ const NetworkDashboard = () => {
             title="Transaction Summary"
             subtitle="Today's transaction activity"
           >
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
               <TransactionItem
                 label="Deposits Today"
                 value={transactions.today.deposits.total}
@@ -329,14 +362,23 @@ const NetworkDashboard = () => {
                 color={AppColors.ERROR}
               />
               <Divider sx={{ borderColor: AppColors.BG_SECONDARY }} />
-              <Box sx={{
-                p: 2,
-                backgroundColor: AppColors.HLT_LIGHT,
-                borderRadius: 2,
-                border: `1px solid ${AppColors.GOLD_DARK}30`
-              }}>
-                <Typography variant="h5" sx={{ color: AppColors.GOLD_DARK, fontWeight: 700 }}>
-                  ${(transactions.today.deposits.total - transactions.today.withdrawals.total).toLocaleString()}
+              <Box
+                sx={{
+                  p: 2,
+                  backgroundColor: AppColors.HLT_LIGHT,
+                  borderRadius: 2,
+                  border: `1px solid ${AppColors.GOLD_DARK}30`,
+                }}
+              >
+                <Typography
+                  variant="h5"
+                  sx={{ color: AppColors.GOLD_DARK, fontWeight: 700 }}
+                >
+                  $
+                  {(
+                    transactions.today.deposits.total -
+                    transactions.today.withdrawals.total
+                  ).toLocaleString()}
                 </Typography>
                 <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
                   Net Flow Today
@@ -371,14 +413,14 @@ const NetworkDashboard = () => {
               </Grid>
               <Grid size={{ xs: 6 }}>
                 <QuickStatItem
-                  label="Total Deposits"
+                  label="Total User Deposits"
                   value={transactions.total.deposits.count}
                   color={AppColors.SUCCESS}
                 />
               </Grid>
               <Grid size={{ xs: 6 }}>
                 <QuickStatItem
-                  label="Total Withdrawals"
+                  label="Total User Withdrawals"
                   value={transactions.total.withdrawals.count}
                   color={AppColors.GOLD_DARK}
                 />
@@ -388,28 +430,69 @@ const NetworkDashboard = () => {
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <DashboardCard
-            title="Wallet Summary"
-            subtitle="Platform wallet balances"
-          >
+          <DashboardCard title="Incomes" subtitle="Total incomes from all sources">
             <Grid container spacing={2}>
               <Grid size={{ xs: 6 }}>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Typography variant="h4" sx={{ color: AppColors.GOLD_DARK, fontWeight: 700, mb: 1 }}>
-                    ${wallets.totalMainBalance.toLocaleString()}
+                <Box sx={{ textAlign: "center", p: 2 }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ color: AppColors.GOLD_DARK, fontWeight: 700, mb: 1 }}
+                  >
+                    ${incomes.totalLevelIncome.toLocaleString()}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: AppColors.TXT_SUB, mb: 2 }}>
-                    Main Balance
+                  <Typography
+                    variant="body2"
+                    sx={{ color: AppColors.TXT_SUB, mb: 2 }}
+                  >
+                    Total Level Income
                   </Typography>
                 </Box>
               </Grid>
               <Grid size={{ xs: 6 }}>
-                <Box sx={{ textAlign: 'center', p: 2 }}>
-                  <Typography variant="h4" sx={{ color: AppColors.GOLD_DARK, fontWeight: 700, mb: 1 }}>
-                    ${wallets.totalWithdrawable.toLocaleString()}
+                <Box sx={{ textAlign: "center", p: 2 }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ color: AppColors.GOLD_DARK, fontWeight: 700, mb: 1 }}
+                  >
+                    ${incomes.totalROI.toLocaleString()}
                   </Typography>
-                  <Typography variant="body2" sx={{ color: AppColors.TXT_SUB, mb: 2 }}>
-                    Withdrawable
+                  <Typography
+                    variant="body2"
+                    sx={{ color: AppColors.TXT_SUB, mb: 2 }}
+                  >
+                    Total ROI
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Box sx={{ textAlign: "center", p: 2 }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ color: AppColors.GOLD_DARK, fontWeight: 700, mb: 1 }}
+                  >
+                    ${incomes.totalRankIncome.toLocaleString()}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: AppColors.TXT_SUB, mb: 2 }}
+                  >
+                    Total Rank Income
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Box sx={{ textAlign: "center", p: 2 }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ color: AppColors.GOLD_DARK, fontWeight: 700, mb: 1 }}
+                  >
+                    ${incomes.totalSameRankIncome?.toLocaleString()}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: AppColors.TXT_SUB, mb: 2 }}
+                  >
+                    Total Same Rank Income
                   </Typography>
                 </Box>
               </Grid>
@@ -430,7 +513,7 @@ const DashboardCard = ({ title, subtitle, children }) => (
       border: `1px solid ${AppColors.BG_SECONDARY}`,
       borderRadius: 3,
       p: { xs: 2, md: 3 },
-      height: '100%',
+      height: "100%",
       background: `linear-gradient(135deg, ${AppColors.BG_CARD} 0%, ${AppColors.BG_SECONDARY} 100%)`,
     }}
   >
@@ -449,7 +532,7 @@ const DashboardCard = ({ title, subtitle, children }) => (
         variant="body2"
         sx={{
           color: AppColors.TXT_SUB,
-          fontSize: '0.875rem',
+          fontSize: "0.875rem",
         }}
       >
         {subtitle}
@@ -460,7 +543,7 @@ const DashboardCard = ({ title, subtitle, children }) => (
 );
 
 // Metric Card Component
-const MetricCard = ({ title, value, icon, trend, subtitle }) => (
+const MetricCard = ({ title, value, icon, subtitle }) => (
   <Paper
     elevation={0}
     sx={{
@@ -468,11 +551,11 @@ const MetricCard = ({ title, value, icon, trend, subtitle }) => (
       border: `1px solid ${AppColors.BG_SECONDARY}`,
       borderRadius: 3,
       p: { xs: 2, md: 3 },
-      position: 'relative',
-      overflow: 'hidden',
-      '&::before': {
+      position: "relative",
+      overflow: "hidden",
+      "&::before": {
         content: '""',
-        position: 'absolute',
+        position: "absolute",
         top: 0,
         left: 0,
         right: 0,
@@ -481,7 +564,14 @@ const MetricCard = ({ title, value, icon, trend, subtitle }) => (
       },
     }}
   >
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: { xs: 1, md: 2 } }}>
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        mb: { xs: 1, md: 2 },
+      }}
+    >
       <Box>
         <Typography
           variant="h4"
@@ -518,7 +608,7 @@ const MetricCard = ({ title, value, icon, trend, subtitle }) => (
       variant="caption"
       sx={{
         color: AppColors.TXT_SUB,
-        fontSize: '0.75rem',
+        fontSize: "0.75rem",
       }}
     >
       {subtitle}
@@ -528,10 +618,10 @@ const MetricCard = ({ title, value, icon, trend, subtitle }) => (
 
 // User Statistics Item
 const UserStatItem = ({ label, value, percentage, color, icon }) => (
-  <Box sx={{ textAlign: 'center', p: { xs: 1, md: 2 } }}>
+  <Box sx={{ textAlign: "center", p: { xs: 1, md: 2 } }}>
     <Box
       sx={{
-        display: 'inline-flex',
+        display: "inline-flex",
         p: { xs: 1, md: 1.5 },
         borderRadius: 3,
         backgroundColor: `${color}20`,
@@ -578,7 +668,7 @@ const UserStatItem = ({ label, value, percentage, color, icon }) => (
 
 // Financial Metric Component
 const FinancialMetric = ({ label, value, count, color }) => (
-  <Box sx={{ textAlign: 'center', p: { xs: 1, md: 2 } }}>
+  <Box sx={{ textAlign: "center", p: { xs: 1, md: 2 } }}>
     <Typography
       variant="h5"
       sx={{
@@ -607,10 +697,10 @@ const FinancialMetric = ({ label, value, count, color }) => (
           px: 1.5,
           py: 0.5,
           borderRadius: 1,
-          fontSize: '0.75rem',
+          fontSize: "0.75rem",
         }}
       >
-        {count} {count === 1 ? 'transaction' : 'transactions'}
+        {count} {count === 1 ? "transaction" : "transactions"}
       </Typography>
     )}
   </Box>
@@ -618,12 +708,21 @@ const FinancialMetric = ({ label, value, count, color }) => (
 
 // Transaction Item Component
 const TransactionItem = ({ label, value, count, icon, color }) => (
-  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 1.5, borderRadius: 2, backgroundColor: `${AppColors.BG_SECONDARY}50` }}>
+  <Box
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      gap: 2,
+      p: 1.5,
+      borderRadius: 2,
+      backgroundColor: `${AppColors.BG_SECONDARY}50`,
+    }}
+  >
     <Box
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         width: 40,
         height: 40,
         borderRadius: 2,
@@ -638,7 +737,7 @@ const TransactionItem = ({ label, value, count, icon, color }) => (
         variant="body2"
         sx={{
           color: AppColors.TXT_SUB,
-          fontSize: '0.875rem',
+          fontSize: "0.875rem",
         }}
       >
         {label}
@@ -662,7 +761,7 @@ const TransactionItem = ({ label, value, count, icon, color }) => (
           px: 1,
           py: 0.5,
           borderRadius: 1,
-          fontSize: '0.75rem',
+          fontSize: "0.75rem",
         }}
       >
         {count}
@@ -673,7 +772,7 @@ const TransactionItem = ({ label, value, count, icon, color }) => (
 
 // Quick Stat Item Component
 const QuickStatItem = ({ label, value, color }) => (
-  <Box sx={{ textAlign: 'center', p: 2 }}>
+  <Box sx={{ textAlign: "center", p: 2 }}>
     <Typography
       variant="h4"
       sx={{
@@ -688,9 +787,9 @@ const QuickStatItem = ({ label, value, color }) => (
       variant="caption"
       sx={{
         color: AppColors.TXT_SUB,
-        fontSize: '0.75rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
+        fontSize: "0.75rem",
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
       }}
     >
       {label}

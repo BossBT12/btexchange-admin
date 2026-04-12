@@ -142,6 +142,11 @@ const tradeService = {
     const response = await api.post(`${BASE_URL}/users/dummy-deposit`, body);
     return response.data;
   },
+  // users/deduct-balance
+  deductUserBalance: async (body) => {
+    const response = await api.post(`${BASE_URL}/users/deduct-balance`, body);
+    return response.data;
+  },
   updateUserState: async (body) => {
     const response = await api.post(`${BASE_URL}/stats/users`, body);
     return response.data;

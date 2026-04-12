@@ -36,19 +36,18 @@ import {
   Search,
   Visibility,
   Block,
-  Delete,
   Sort,
   ArrowUpward,
   ArrowDownward,
   Person,
   Close,
   Check,
-  Restore,
   AccountBalanceWallet,
   Update,
   Paid,
   Edit,
   MoreVert,
+  MoneyOff,
 } from "@mui/icons-material";
 import { AppColors } from "../../../constant/appColors";
 import useSnackbar from "../../../hooks/useSnackbar";
@@ -86,6 +85,7 @@ const ManageUsers = () => {
 
   // Modal state
   const [userDetails, setUserDetails] = useState(null);
+  const [userUplineData, setUserUplineData] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [userModalMenuAnchor, setUserModalMenuAnchor] = useState(null);
@@ -114,6 +114,17 @@ const ManageUsers = () => {
     note: "",
   });
   const [salaryFormError, setSalaryFormError] = useState(null);
+
+  /** Table row "more" menu (single Menu instance; anchor + user drive which row) */
+  const [tableRowMenuAnchor, setTableRowMenuAnchor] = useState(null);
+  const [tableRowMenuUser, setTableRowMenuUser] = useState(null);
+
+  /** Deduct balance modal */
+  const [deductBalanceOpen, setDeductBalanceOpen] = useState(false);
+  const [deductBalanceSubmitting, setDeductBalanceSubmitting] = useState(false);
+  const [deductForm, setDeductForm] = useState({ UID: "", amount: "" });
+  const [deductFormError, setDeductFormError] = useState(null);
+
   const [userStatsLoading, setUserStatsLoading] = useState(false);
   const [openUserStatsModal, setOpenUserStatsModal] = useState(false);
   const [userStatsSubmitting, setUserStatsSubmitting] = useState(false);
@@ -203,8 +214,9 @@ const ManageUsers = () => {
 
       if (response.success) {
         // Check if the response data has user nested or is direct
-        const userData = response.data.user || response.data;
+        const userData = response.data.user;
         setUserDetails(userData);
+        setUserUplineData(response.data?.personalData?.sponsor);
       } else {
         showSnackbar("Failed to fetch user details", "error");
       }
@@ -467,6 +479,69 @@ const ManageUsers = () => {
     setSalaryFormError(null);
   };
 
+  const closeTableRowMenu = () => {
+    setTableRowMenuAnchor(null);
+    setTableRowMenuUser(null);
+  };
+
+  const handleOpenDeductBalance = (user = null) => {
+    setDeductFormError(null);
+    setDeductForm({
+      UID: user?.UID ?? "",
+      amount: "",
+    });
+    setDeductBalanceOpen(true);
+  };
+
+  const handleCloseDeductBalance = () => {
+    setDeductBalanceOpen(false);
+    setDeductForm({ UID: "", amount: "" });
+    setDeductFormError(null);
+  };
+
+  const handleDeductBalanceSubmit = async (e) => {
+    e.preventDefault();
+    setDeductFormError(null);
+    const UID = (deductForm.UID || "").trim();
+    const amount = parseFloat(deductForm.amount);
+
+    if (!UID) {
+      setDeductFormError("User UID is required");
+      return;
+    }
+    if (Number.isNaN(amount) || amount <= 0) {
+      setDeductFormError("Amount must be a positive number");
+      return;
+    }
+
+    try {
+      setDeductBalanceSubmitting(true);
+      const response = await tradeService.deductUserBalance({
+        UID,
+        amount: Number(amount),
+      });
+      if (response?.success) {
+        showSnackbar(
+          response.message || "Balance deducted successfully",
+          "success",
+        );
+        handleCloseDeductBalance();
+        fetchUsers();
+      } else {
+        const msg = response?.message || "Failed to deduct balance";
+        setDeductFormError(msg);
+        showSnackbar(msg, "error");
+      }
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message || err?.message || "Failed to deduct balance";
+      setDeductFormError(msg);
+      showSnackbar(msg, "error");
+    } finally {
+      setDeductBalanceSubmitting(false);
+    }
+  };
+
   const handleDummyDepositSubmit = async (e) => {
     e.preventDefault();
     setDummyFormError(null);
@@ -688,7 +763,6 @@ const ManageUsers = () => {
           sx={{
             bgcolor: `${AppColors.ERROR}20`,
             color: AppColors.ERROR,
-            fontWeight: 600,
           }}
         />
       );
@@ -701,7 +775,6 @@ const ManageUsers = () => {
           sx={{
             bgcolor: `${AppColors.ERROR}30`,
             color: AppColors.ERROR,
-            fontWeight: 600,
           }}
         />
       );
@@ -715,7 +788,6 @@ const ManageUsers = () => {
             ? `${AppColors.SUCCESS}20`
             : `${AppColors.ERROR}15`,
           color: user.isEmailVerified ? AppColors.SUCCESS : AppColors.ERROR,
-          fontWeight: 600,
         }}
       />
     );
@@ -878,6 +950,17 @@ const ManageUsers = () => {
               <TableHead>
                 <TableRow sx={{ backgroundColor: AppColors.BG_SECONDARY }}>
                   <TableCell
+                    align="center"
+                    sx={{
+                      color: AppColors.TXT_MAIN,
+                      fontWeight: 600,
+                      width: 56,
+                      maxWidth: 72,
+                    }}
+                  >
+                    #
+                  </TableCell>
+                  <TableCell
                     sx={{
                       color: AppColors.TXT_MAIN,
                       fontWeight: 600,
@@ -970,7 +1053,7 @@ const ManageUsers = () => {
                 {loading ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       align="center"
                       sx={{ py: { xs: 1, md: 1.5 } }}
                     >
@@ -980,7 +1063,7 @@ const ManageUsers = () => {
                 ) : users.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       align="center"
                       sx={{ py: { xs: 1, md: 1.5 }, color: AppColors.TXT_SUB }}
                     >
@@ -988,7 +1071,7 @@ const ManageUsers = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  users.map((user) => (
+                  users.map((user, index) => (
                     <TableRow
                       key={user._id}
                       hover
@@ -998,6 +1081,15 @@ const ManageUsers = () => {
                         },
                       }}
                     >
+                      <TableCell
+                        align="center"
+                        sx={{
+                          color: AppColors.TXT_SUB,
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {page * rowsPerPage + index + 1}
+                      </TableCell>
                       <TableCell>
                         <Box
                           sx={{ display: "flex", alignItems: "center", gap: 2 }}
@@ -1061,16 +1153,22 @@ const ManageUsers = () => {
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
-                        <Stack
-                          direction="row"
-                          spacing={0.5}
-                          justifyContent="center"
-                          flexWrap="wrap"
+                        <Tooltip
+                          title={
+                            user.isDeleted
+                              ? "Actions unavailable for deleted users"
+                              : "Actions"
+                          }
                         >
-                          <Tooltip title="View and edit Details">
+                          <span>
                             <IconButton
                               size="small"
-                              onClick={() => handleViewUser(user)}
+                              aria-label="Open user actions"
+                              disabled={user.isDeleted}
+                              onClick={(e) => {
+                                setTableRowMenuAnchor(e.currentTarget);
+                                setTableRowMenuUser(user);
+                              }}
                               sx={{
                                 color: AppColors.GOLD_DARK,
                                 "&:hover": {
@@ -1078,38 +1176,10 @@ const ManageUsers = () => {
                                 },
                               }}
                             >
-                              <Visibility fontSize="small" />
+                              <MoreVert fontSize="small" />
                             </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Give Salary">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenSalary(user)}
-                              sx={{
-                                color: AppColors.GOLD_DARK,
-                                "&:hover": {
-                                  backgroundColor: `${AppColors.GOLD_DARK}20`,
-                                },
-                              }}
-                            >
-                              <Paid fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Dummy Deposit">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenDummyDeposit(user)}
-                              sx={{
-                                color: AppColors.GOLD_DARK,
-                                "&:hover": {
-                                  backgroundColor: `${AppColors.GOLD_DARK}20`,
-                                },
-                              }}
-                            >
-                              <AccountBalanceWallet fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
+                          </span>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1117,6 +1187,108 @@ const ManageUsers = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          <Menu
+            anchorEl={tableRowMenuAnchor}
+            open={Boolean(tableRowMenuAnchor)}
+            onClose={closeTableRowMenu}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{
+              paper: {
+                sx: {
+                  border: `1px solid ${AppColors.BG_SECONDARY}`,
+                  bgcolor: AppColors.BG_CARD,
+                  minWidth: 220,
+                },
+              },
+            }}
+          >
+            <ActionMenuItem
+              onClick={() => {
+                const u = tableRowMenuUser;
+                closeTableRowMenu();
+                if (u) handleViewUser(u);
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <Visibility fontSize="small" sx={{ color: AppColors.GOLD_DARK }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="View and edit details"
+                slotProps={{
+                  primary: {
+                    sx: { fontWeight: 600, fontSize: FONT_SIZE.BODY },
+                  },
+                }}
+              />
+            </ActionMenuItem>
+            <ActionMenuItem
+              onClick={() => {
+                const u = tableRowMenuUser;
+                closeTableRowMenu();
+                if (u) handleOpenSalary(u);
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <Paid fontSize="small" sx={{ color: AppColors.GOLD_DARK }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Give salary"
+                slotProps={{
+                  primary: {
+                    sx: { fontWeight: 600, fontSize: FONT_SIZE.BODY },
+                  },
+                }}
+              />
+            </ActionMenuItem>
+            <ActionMenuItem
+              onClick={() => {
+                const u = tableRowMenuUser;
+                closeTableRowMenu();
+                if (u) handleOpenDummyDeposit(u);
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <AccountBalanceWallet
+                  fontSize="small"
+                  sx={{ color: AppColors.GOLD_DARK }}
+                />
+              </ListItemIcon>
+              <ListItemText
+                primary="Dummy deposit"
+                slotProps={{
+                  primary: {
+                    sx: { fontWeight: 600, fontSize: FONT_SIZE.BODY },
+                  },
+                }}
+              />
+            </ActionMenuItem>
+            <ActionMenuItem
+              onClick={() => {
+                const u = tableRowMenuUser;
+                closeTableRowMenu();
+                if (u) handleOpenDeductBalance(u);
+              }}
+              sx={{ color: AppColors.ERROR }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <MoneyOff fontSize="small" sx={{ color: AppColors.ERROR }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Deduct balance"
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontWeight: 600,
+                      fontSize: FONT_SIZE.BODY,
+                      color: AppColors.ERROR,
+                    },
+                  },
+                }}
+              />
+            </ActionMenuItem>
+          </Menu>
 
           {/* Pagination */}
           <TablePagination
@@ -1377,6 +1549,12 @@ const ManageUsers = () => {
                             }}
                           />
                         }
+                      />
+                    </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <UserInfoItem
+                        label="Upline Id"
+                        value={userUplineData?.UID || "N/A"}
                       />
                     </Grid>
                   </Grid>
@@ -1937,6 +2115,198 @@ const ManageUsers = () => {
                     <CircularProgress size={22} sx={{ color: "inherit" }} />
                   ) : (
                     "Confirm Deposit"
+                  )}
+                </Button>
+              </Stack>
+            </Box>
+          </CardContent>
+        </Card>
+      </Modal>
+
+      {/* Deduct balance Modal */}
+      <Modal
+        open={deductBalanceOpen}
+        onClose={handleCloseDeductBalance}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: { xs: 1, md: 2 },
+        }}
+      >
+        <Card
+          sx={{
+            backgroundColor: AppColors.BG_CARD,
+            border: `1px solid ${AppColors.BG_SECONDARY}`,
+            borderRadius: 3,
+            maxWidth: 440,
+            width: "100%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+          }}
+        >
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    bgcolor: `${AppColors.ERROR}18`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MoneyOff sx={{ color: AppColors.ERROR, fontSize: 24 }} />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="h6"
+                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}
+                  >
+                    Deduct balance
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: AppColors.TXT_SUB }}
+                  >
+                    Debit user balance (admin)
+                  </Typography>
+                </Box>
+              </Box>
+              <IconButton
+                onClick={handleCloseDeductBalance}
+                size="small"
+                sx={{
+                  color: AppColors.TXT_SUB,
+                  "&:hover": {
+                    backgroundColor: `${AppColors.ERROR}20`,
+                    color: AppColors.ERROR,
+                  },
+                }}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            <Box
+              component="form"
+              onSubmit={handleDeductBalanceSubmit}
+              noValidate
+              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              {deductFormError && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.ERROR,
+                    bgcolor: `${AppColors.ERROR}14`,
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: 1,
+                  }}
+                >
+                  {deductFormError}
+                </Typography>
+              )}
+
+              <TextField
+                fullWidth
+                required
+                label="User UID"
+                placeholder="e.g. EXTRADE000369"
+                value={deductForm.UID}
+                onChange={(e) =>
+                  setDeductForm((p) => ({ ...p, UID: e.target.value }))
+                }
+                InputProps={{
+                  sx: {
+                    bgcolor: AppColors.BG_SECONDARY,
+                    borderRadius: 2,
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
+                  },
+                }}
+                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
+              />
+
+              <TextField
+                fullWidth
+                required
+                label="Amount"
+                type="number"
+                inputProps={{ min: 0.01, step: 0.01 }}
+                placeholder="0.00"
+                value={deductForm.amount}
+                onChange={(e) =>
+                  setDeductForm((p) => ({ ...p, amount: e.target.value }))
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment
+                      position="start"
+                      sx={{ color: AppColors.TXT_SUB }}
+                    >
+                      $
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    bgcolor: AppColors.BG_SECONDARY,
+                    borderRadius: 2,
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
+                  },
+                }}
+                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
+              />
+
+              <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleCloseDeductBalance}
+                  disabled={deductBalanceSubmitting}
+                  sx={{
+                    borderColor: AppColors.BG_SECONDARY,
+                    color: AppColors.TXT_MAIN,
+                    "&:hover": {
+                      borderColor: AppColors.TXT_SUB,
+                      bgcolor: `${AppColors.TXT_SUB}10`,
+                    },
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  type="submit"
+                  disabled={deductBalanceSubmitting}
+                  sx={{
+                    bgcolor: AppColors.ERROR,
+                    "&:hover": { bgcolor: `${AppColors.ERROR}dd` },
+                  }}
+                >
+                  {deductBalanceSubmitting ? (
+                    <CircularProgress size={22} sx={{ color: "inherit" }} />
+                  ) : (
+                    "Confirm deduction"
                   )}
                 </Button>
               </Stack>

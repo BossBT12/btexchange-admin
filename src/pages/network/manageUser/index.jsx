@@ -45,6 +45,7 @@ import {
   AccountBalanceWallet,
   Edit,
   MoreVert,
+  MoneyOff,
 } from "@mui/icons-material";
 import { AppColors } from "../../../constant/appColors";
 import useSnackbar from "../../../hooks/useSnackbar";
@@ -89,6 +90,17 @@ const NetworkManageUsers = () => {
   const [dummyDepositSubmitting, setDummyDepositSubmitting] = useState(false);
   const [dummyForm, setDummyForm] = useState({ UID: "", amount: "" });
   const [dummyFormError, setDummyFormError] = useState(null);
+
+  const [tableRowMenuAnchor, setTableRowMenuAnchor] = useState(null);
+  const [tableRowMenuUser, setTableRowMenuUser] = useState(null);
+
+  const [reduceCapitalOpen, setReduceCapitalOpen] = useState(false);
+  const [reduceCapitalSubmitting, setReduceCapitalSubmitting] = useState(false);
+  const [reduceCapitalForm, setReduceCapitalForm] = useState({
+    UID: "",
+    amount: "",
+  });
+  const [reduceCapitalFormError, setReduceCapitalFormError] = useState(null);
 
   // Fetch users
   const fetchUsers = async () => {
@@ -357,6 +369,71 @@ const NetworkManageUsers = () => {
     }
   };
 
+  const closeTableRowMenu = () => {
+    setTableRowMenuAnchor(null);
+    setTableRowMenuUser(null);
+  };
+
+  const handleOpenReduceCapital = (user = null) => {
+    setReduceCapitalFormError(null);
+    setReduceCapitalForm({
+      UID: user?.UID ?? "",
+      amount: "",
+    });
+    setReduceCapitalOpen(true);
+  };
+
+  const handleCloseReduceCapital = () => {
+    setReduceCapitalOpen(false);
+    setReduceCapitalForm({ UID: "", amount: "" });
+    setReduceCapitalFormError(null);
+  };
+
+  const handleReduceCapitalSubmit = async (e) => {
+    e.preventDefault();
+    setReduceCapitalFormError(null);
+    const UID = (reduceCapitalForm.UID || "").trim();
+    const amount = parseFloat(reduceCapitalForm.amount);
+
+    if (!UID) {
+      setReduceCapitalFormError("User UID is required");
+      return;
+    }
+    if (Number.isNaN(amount) || amount <= 0) {
+      setReduceCapitalFormError("Amount must be a positive number");
+      return;
+    }
+
+    try {
+      setReduceCapitalSubmitting(true);
+      const response = await networkService.reduceUserCapital({
+        UID,
+        amount: Number(amount),
+      });
+      if (response?.success) {
+        showSnackbar(
+          response.message || "Capital reduced successfully",
+          "success",
+        );
+        handleCloseReduceCapital();
+        fetchUsers();
+      } else {
+        const msg = response?.message || "Failed to reduce capital";
+        setReduceCapitalFormError(msg);
+        showSnackbar(msg, "error");
+      }
+    } catch (err) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to reduce capital";
+      setReduceCapitalFormError(msg);
+      showSnackbar(msg, "error");
+    } finally {
+      setReduceCapitalSubmitting(false);
+    }
+  };
+
   // Handle page change
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -546,6 +623,17 @@ const NetworkManageUsers = () => {
               <TableHead>
                 <TableRow sx={{ backgroundColor: AppColors.BG_SECONDARY }}>
                   <TableCell
+                    align="center"
+                    sx={{
+                      color: AppColors.TXT_MAIN,
+                      fontWeight: 600,
+                      width: 56,
+                      maxWidth: 72,
+                    }}
+                  >
+                    #
+                  </TableCell>
+                  <TableCell
                     sx={{
                       color: AppColors.TXT_MAIN,
                       fontWeight: 600,
@@ -643,7 +731,7 @@ const NetworkManageUsers = () => {
                 {loading ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       align="center"
                       sx={{ py: { xs: 2, md: 4 } }}
                     >
@@ -653,7 +741,7 @@ const NetworkManageUsers = () => {
                 ) : users.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       align="center"
                       sx={{ py: 4, color: AppColors.TXT_SUB }}
                     >
@@ -661,7 +749,7 @@ const NetworkManageUsers = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  users.map((user) => (
+                  users.map((user, index) => (
                     <TableRow
                       key={user._id}
                       hover
@@ -671,6 +759,15 @@ const NetworkManageUsers = () => {
                         },
                       }}
                     >
+                      <TableCell
+                        align="center"
+                        sx={{
+                          color: AppColors.TXT_SUB,
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {page * rowsPerPage + index + 1}
+                      </TableCell>
                       <TableCell>
                         <Box
                           sx={{ display: "flex", alignItems: "center", gap: 2 }}
@@ -751,16 +848,15 @@ const NetworkManageUsers = () => {
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
-                        <Stack
-                          direction="row"
-                          spacing={0.5}
-                          justifyContent="center"
-                          flexWrap="wrap"
-                        >
-                          <Tooltip title="View and edit Details">
+                        <Tooltip title="Actions">
+                          <span>
                             <IconButton
                               size="small"
-                              onClick={() => handleViewUser(user)}
+                              aria-label="Open user actions"
+                              onClick={(e) => {
+                                setTableRowMenuAnchor(e.currentTarget);
+                                setTableRowMenuUser(user);
+                              }}
                               sx={{
                                 color: AppColors.GOLD_DARK,
                                 "&:hover": {
@@ -768,24 +864,10 @@ const NetworkManageUsers = () => {
                                 },
                               }}
                             >
-                              <Visibility fontSize="small" />
+                              <MoreVert fontSize="small" />
                             </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Dummy Deposit">
-                            <IconButton
-                              size="small"
-                              onClick={() => handleOpenDummyDeposit(user)}
-                              sx={{
-                                color: AppColors.GOLD_DARK,
-                                "&:hover": {
-                                  backgroundColor: `${AppColors.GOLD_DARK}20`,
-                                },
-                              }}
-                            >
-                              <AccountBalanceWallet fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
+                          </span>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))
@@ -793,6 +875,92 @@ const NetworkManageUsers = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
+          <Menu
+            anchorEl={tableRowMenuAnchor}
+            open={Boolean(tableRowMenuAnchor)}
+            onClose={closeTableRowMenu}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{
+              paper: {
+                sx: {
+                  border: `1px solid ${AppColors.BG_SECONDARY}`,
+                  bgcolor: AppColors.BG_CARD,
+                  minWidth: 220,
+                },
+              },
+            }}
+          >
+            <ActionMenuItem
+              onClick={() => {
+                const u = tableRowMenuUser;
+                closeTableRowMenu();
+                if (u) handleViewUser(u);
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <Visibility
+                  fontSize="small"
+                  sx={{ color: AppColors.GOLD_DARK }}
+                />
+              </ListItemIcon>
+              <ListItemText
+                primary="View and edit details"
+                slotProps={{
+                  primary: {
+                    sx: { fontWeight: 600, fontSize: FONT_SIZE.BODY },
+                  },
+                }}
+              />
+            </ActionMenuItem>
+            <ActionMenuItem
+              onClick={() => {
+                const u = tableRowMenuUser;
+                closeTableRowMenu();
+                if (u) handleOpenDummyDeposit(u);
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <AccountBalanceWallet
+                  fontSize="small"
+                  sx={{ color: AppColors.GOLD_DARK }}
+                />
+              </ListItemIcon>
+              <ListItemText
+                primary="Dummy deposit"
+                slotProps={{
+                  primary: {
+                    sx: { fontWeight: 600, fontSize: FONT_SIZE.BODY },
+                  },
+                }}
+              />
+            </ActionMenuItem>
+            <ActionMenuItem
+              onClick={() => {
+                const u = tableRowMenuUser;
+                closeTableRowMenu();
+                if (u) handleOpenReduceCapital(u);
+              }}
+              sx={{ color: AppColors.ERROR }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}>
+                <MoneyOff fontSize="small" sx={{ color: AppColors.ERROR }} />
+              </ListItemIcon>
+              <ListItemText
+                primary="Reduce capital"
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontWeight: 600,
+                      fontSize: FONT_SIZE.BODY,
+                      color: AppColors.ERROR,
+                    },
+                  },
+                }}
+              />
+            </ActionMenuItem>
+          </Menu>
 
           {/* Pagination */}
           <TablePagination
@@ -1032,6 +1200,14 @@ const NetworkManageUsers = () => {
                         }
                       />
                     </Grid>
+                    <Grid size={{ xs: 12, sm: 6 }}>
+                      <UserInfoItem
+                        label="Sponsor UID"
+                        value={
+                          userDetails.user?.sponsorId?.UID || userDetails.sponsorId?.UID || "N/A"
+                        }
+                      />
+                    </Grid>
                   </Grid>
                 </Box>
 
@@ -1260,6 +1436,201 @@ const NetworkManageUsers = () => {
                     <CircularProgress size={22} sx={{ color: "inherit" }} />
                   ) : (
                     "Confirm Deposit"
+                  )}
+                </Button>
+              </Stack>
+            </Box>
+          </CardContent>
+        </Card>
+      </Modal>
+
+      {/* Reduce capital Modal */}
+      <Modal
+        open={reduceCapitalOpen}
+        onClose={handleCloseReduceCapital}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: { xs: 1, md: 2 },
+        }}
+      >
+        <Card
+          sx={{
+            backgroundColor: AppColors.BG_CARD,
+            border: `1px solid ${AppColors.BG_SECONDARY}`,
+            borderRadius: 3,
+            maxWidth: 440,
+            width: "100%",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+          }}
+        >
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 2,
+                    bgcolor: `${AppColors.ERROR}18`,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <MoneyOff sx={{ color: AppColors.ERROR, fontSize: 24 }} />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="h6"
+                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 700 }}
+                  >
+                    Reduce capital
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: AppColors.TXT_SUB }}
+                  >
+                    Reduce user capital (network admin)
+                  </Typography>
+                </Box>
+              </Box>
+              <IconButton
+                onClick={handleCloseReduceCapital}
+                size="small"
+                sx={{
+                  color: AppColors.TXT_SUB,
+                  "&:hover": {
+                    backgroundColor: `${AppColors.ERROR}20`,
+                    color: AppColors.ERROR,
+                  },
+                }}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            <Box
+              component="form"
+              onSubmit={handleReduceCapitalSubmit}
+              noValidate
+              sx={{ display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              {reduceCapitalFormError && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.ERROR,
+                    bgcolor: `${AppColors.ERROR}14`,
+                    px: 1.5,
+                    py: 1,
+                    borderRadius: 1,
+                  }}
+                >
+                  {reduceCapitalFormError}
+                </Typography>
+              )}
+
+              <TextField
+                fullWidth
+                required
+                label="User UID"
+                placeholder="e.g. USR12345XYZ"
+                value={reduceCapitalForm.UID}
+                onChange={(e) =>
+                  setReduceCapitalForm((p) => ({ ...p, UID: e.target.value }))
+                }
+                InputProps={{
+                  sx: {
+                    bgcolor: AppColors.BG_SECONDARY,
+                    borderRadius: 2,
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
+                  },
+                }}
+                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
+              />
+
+              <TextField
+                fullWidth
+                required
+                label="Amount"
+                type="number"
+                inputProps={{ min: 0.01, step: 0.01 }}
+                placeholder="0.00"
+                value={reduceCapitalForm.amount}
+                onChange={(e) =>
+                  setReduceCapitalForm((p) => ({
+                    ...p,
+                    amount: e.target.value,
+                  }))
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment
+                      position="start"
+                      sx={{ color: AppColors.TXT_SUB }}
+                    >
+                      $
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    bgcolor: AppColors.BG_SECONDARY,
+                    borderRadius: 2,
+                    "& fieldset": { borderColor: "transparent" },
+                    "&:hover fieldset": { borderColor: AppColors.GOLD_DARK },
+                    "&.Mui-focused fieldset": {
+                      borderColor: AppColors.GOLD_DARK,
+                    },
+                    "& input": { color: AppColors.TXT_MAIN },
+                  },
+                }}
+                InputLabelProps={{ sx: { color: AppColors.TXT_SUB } }}
+              />
+
+              <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={handleCloseReduceCapital}
+                  disabled={reduceCapitalSubmitting}
+                  sx={{
+                    borderColor: AppColors.BG_SECONDARY,
+                    color: AppColors.TXT_MAIN,
+                    "&:hover": {
+                      borderColor: AppColors.TXT_SUB,
+                      bgcolor: `${AppColors.TXT_SUB}10`,
+                    },
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  type="submit"
+                  disabled={reduceCapitalSubmitting}
+                  sx={{
+                    bgcolor: AppColors.ERROR,
+                    "&:hover": { bgcolor: `${AppColors.ERROR}dd` },
+                  }}
+                >
+                  {reduceCapitalSubmitting ? (
+                    <CircularProgress size={22} sx={{ color: "inherit" }} />
+                  ) : (
+                    "Confirm reduction"
                   )}
                 </Button>
               </Stack>

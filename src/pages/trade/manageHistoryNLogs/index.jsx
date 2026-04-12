@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Typography,
   Box,
@@ -28,7 +28,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-} from '@mui/material';
+} from "@mui/material";
 import {
   TrendingUp,
   ArrowDownward,
@@ -39,38 +39,38 @@ import {
   History,
   ShowChart,
   Visibility,
-} from '@mui/icons-material';
-import tradeService from '../../../services/tradeService';
-import { AppColors } from '../../../constant/appColors';
-import BTLoader from '../../../components/Loader';
+} from "@mui/icons-material";
+import tradeService from "../../../services/tradeService";
+import { AppColors } from "../../../constant/appColors";
+import BTLoader from "../../../components/Loader";
 import dayjs from "dayjs";
-import DatePicker from '../../../components/input/datePicker';
+import DatePicker from "../../../components/input/datePicker";
 
 const ManageHistoryNLogs = () => {
-  const [activeTab, setActiveTab] = useState('trades');
+  const [activeTab, setActiveTab] = useState("trades");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 10,
     total: 0,
-    totalPages: 0
+    totalPages: 0,
   });
   const [filters, setFilters] = useState({
-    userId: '',
-    uid: '',
-    email: '',
-    status: '',
-    type: '',
-    pair: '',
+    userId: "",
+    uid: "",
+    email: "",
+    status: "",
+    type: "",
+    pair: "",
     startDate: null,
-    endDate: null
+    endDate: null,
   });
   const [appliedDateRange, setAppliedDateRange] = useState({
     startDate: null,
-    endDate: null
+    endDate: null,
   });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [exportLoading, setExportLoading] = useState(false);
   const [incomeSummary, setIncomeSummary] = useState(null);
   const [incomeDetailItem, setIncomeDetailItem] = useState(null);
@@ -78,10 +78,10 @@ const ManageHistoryNLogs = () => {
   const [depositDetailItem, setDepositDetailItem] = useState(null);
 
   const tabs = [
-    { id: 'trades', label: 'Trades History', icon: <ShowChart /> },
-    { id: 'income', label: 'Income History', icon: <TrendingUp /> },
-    { id: 'deposits', label: 'Deposits History', icon: <ArrowDownward /> },
-    { id: 'withdrawals', label: 'Withdrawals History', icon: <ArrowUpward /> }
+    { id: "trades", label: "Trades History", icon: <ShowChart /> },
+    { id: "income", label: "Income History", icon: <TrendingUp /> },
+    { id: "deposits", label: "Deposits History", icon: <ArrowDownward /> },
+    { id: "withdrawals", label: "Withdrawals History", icon: <ArrowUpward /> },
   ];
 
   useEffect(() => {
@@ -98,7 +98,9 @@ const ManageHistoryNLogs = () => {
       ...(filters.status && { status: filters.status }),
       ...(filters.type && { type: filters.type }),
       ...(filters.pair && { pair: filters.pair }),
-      ...(appliedDateRange.startDate && { startDate: appliedDateRange.startDate }),
+      ...(appliedDateRange.startDate && {
+        startDate: appliedDateRange.startDate,
+      }),
       ...(appliedDateRange.endDate && { endDate: appliedDateRange.endDate }),
       ...overrides,
     };
@@ -111,16 +113,16 @@ const ManageHistoryNLogs = () => {
       const params = getApiParams();
 
       switch (activeTab) {
-        case 'trades':
+        case "trades":
           response = await tradeService.getTradesHistory(params);
           break;
-        case 'income':
+        case "income":
           response = await tradeService.getIncomeHistory(params);
           break;
-        case 'deposits':
+        case "deposits":
           response = await tradeService.getDepositsHistory(params);
           break;
-        case 'withdrawals':
+        case "withdrawals":
           response = await tradeService.getWithdrawalsHistory(params);
           break;
         default:
@@ -128,23 +130,25 @@ const ManageHistoryNLogs = () => {
       }
 
       setData(response.data || []);
-      setPagination(prev => {
+      setPagination((prev) => {
         if (response.pagination) {
           return { ...prev, ...response.pagination };
         }
         return {
           ...prev,
           total: response.total || 0,
-          totalPages: Math.ceil((response.total || 0) / (response.pagination?.limit ?? prev.limit))
+          totalPages: Math.ceil(
+            (response.total || 0) / (response.pagination?.limit ?? prev.limit),
+          ),
         };
       });
-      if (activeTab === 'income' && response.summary) {
+      if (activeTab === "income" && response.summary) {
         setIncomeSummary(response.summary);
       } else {
         setIncomeSummary(null);
       }
     } catch (error) {
-      console.error('Error loading history data:', error);
+      console.error("Error loading history data:", error);
       setData([]);
     } finally {
       setLoading(false);
@@ -152,56 +156,60 @@ const ManageHistoryNLogs = () => {
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination(prev => ({ ...prev, page: 1 }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
   const handleApplyDateFilter = () => {
     setAppliedDateRange({
-      startDate: filters.startDate ? dayjs(filters.startDate).format('DD-MM-YYYY') : null,
-      endDate: filters.endDate ? dayjs(filters.endDate).format('DD-MM-YYYY') : null,
+      startDate: filters.startDate
+        ? dayjs(filters.startDate).format("DD-MM-YYYY")
+        : null,
+      endDate: filters.endDate
+        ? dayjs(filters.endDate).format("DD-MM-YYYY")
+        : null,
     });
-    setPagination(prev => ({ ...prev, page: 1 }));
+    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    if (value.includes('@')) {
-      handleFilterChange('email', value);
+    if (value.includes("@")) {
+      handleFilterChange("email", value);
     } else if (value.match(/^\d+$/)) {
-      handleFilterChange('uid', value);
+      handleFilterChange("uid", value);
     } else {
-      handleFilterChange('userId', value);
+      handleFilterChange("userId", value);
     }
   };
 
   const clearFilters = () => {
     setFilters({
-      userId: '',
-      uid: '',
-      email: '',
-      status: '',
-      type: '',
-      pair: '',
+      userId: "",
+      uid: "",
+      email: "",
+      status: "",
+      type: "",
+      pair: "",
       startDate: null,
-      endDate: null
+      endDate: null,
     });
     setAppliedDateRange({ startDate: null, endDate: null });
-    setSearchTerm('');
-    setPagination(prev => ({ ...prev, page: 1 }));
+    setSearchTerm("");
+    setPagination((prev) => ({ ...prev, page: 1 }));
   };
 
   const formatDate = (date) => {
-    if (!date) return 'N/A';
+    if (!date) return "N/A";
     return new Date(date).toLocaleString();
   };
 
   const formatAmount = (amount) => {
-    if (!amount && amount !== 0) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
+    if (!amount && amount !== 0) return "N/A";
+    return new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 6
+      maximumFractionDigits: 6,
     }).format(amount);
   };
 
@@ -217,16 +225,16 @@ const ManageHistoryNLogs = () => {
 
         let response;
         switch (activeTab) {
-          case 'trades':
+          case "trades":
             response = await tradeService.getTradesHistory(params);
             break;
-          case 'income':
+          case "income":
             response = await tradeService.getIncomeHistory(params);
             break;
-          case 'deposits':
+          case "deposits":
             response = await tradeService.getDepositsHistory(params);
             break;
-          case 'withdrawals':
+          case "withdrawals":
             response = await tradeService.getWithdrawalsHistory(params);
             break;
         }
@@ -240,9 +248,12 @@ const ManageHistoryNLogs = () => {
         }
       }
 
-      downloadCSV(allData, `${activeTab}_history_${new Date().toISOString().split('T')[0]}.csv`);
+      downloadCSV(
+        allData,
+        `${activeTab}_history_${new Date().toISOString().split("T")[0]}.csv`,
+      );
     } catch (error) {
-      console.error('Export failed:', error);
+      console.error("Export failed:", error);
     } finally {
       setExportLoading(false);
     }
@@ -253,22 +264,26 @@ const ManageHistoryNLogs = () => {
 
     const headers = Object.keys(data[0]);
     const csvContent = [
-      headers.join(','),
-      ...data.map(row => headers.map(header => {
-        const value = row[header];
-        if (value === null || value === undefined) return '';
-        const stringValue = String(value);
-        return stringValue.includes(',') ? `"${stringValue}"` : stringValue;
-      }).join(','))
-    ].join('\n');
+      headers.join(","),
+      ...data.map((row) =>
+        headers
+          .map((header) => {
+            const value = row[header];
+            if (value === null || value === undefined) return "";
+            const stringValue = String(value);
+            return stringValue.includes(",") ? `"${stringValue}"` : stringValue;
+          })
+          .join(","),
+      ),
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
+      link.setAttribute("href", url);
+      link.setAttribute("download", filename);
+      link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -277,18 +292,21 @@ const ManageHistoryNLogs = () => {
 
   const getStatusChip = (status) => {
     const statusConfig = {
-      WIN: { color: 'success', label: 'Win' },
-      LOSS: { color: 'error', label: 'Loss' },
-      OPEN: { color: 'warning', label: 'Open' },
-      SUCCESS: { color: 'success', label: 'Success' },
-      PENDING: { color: 'warning', label: 'Pending' },
-      FAILED: { color: 'error', label: 'Failed' },
-      COMPLETED: { color: 'success', label: 'Completed' },
-      PROCESSING: { color: 'warning', label: 'Processing' },
-      CONFIRMED: { color: 'success', label: 'Confirmed' }
+      WIN: { color: "success", label: "Win" },
+      LOSS: { color: "error", label: "Loss" },
+      OPEN: { color: "warning", label: "Open" },
+      SUCCESS: { color: "success", label: "Success" },
+      PENDING: { color: "warning", label: "Pending" },
+      FAILED: { color: "error", label: "Failed" },
+      COMPLETED: { color: "success", label: "Completed" },
+      PROCESSING: { color: "warning", label: "Processing" },
+      CONFIRMED: { color: "success", label: "Confirmed" },
     };
 
-    const config = statusConfig[status] || { color: 'default', label: status || '—' };
+    const config = statusConfig[status] || {
+      color: "default",
+      label: status || "—",
+    };
 
     return (
       <Chip
@@ -296,20 +314,18 @@ const ManageHistoryNLogs = () => {
         size="small"
         color={config.color}
         sx={{
-          fontWeight: 600,
-          textTransform: 'none',
-          '& .MuiChip-label': {
+          textTransform: "none",
+          "& .MuiChip-label": {
             px: { xs: 0.5, lg: 1 },
-          }
+            py: 0,
+          },
         }}
       />
     );
   };
 
   const renderFilters = () => (
-    <Box
-      sx={{ pt: { xs: 1, md: 1.5 } }}
-    >
+    <Box sx={{ pt: { xs: 1, md: 1.5 } }}>
       <Grid container spacing={{ xs: 1, md: 1.5 }}>
         <Grid size={{ xs: 12, lg: 4 }}>
           <TextField
@@ -331,37 +347,45 @@ const ManageHistoryNLogs = () => {
           />
         </Grid>
 
-        {activeTab === 'trades' && (
+        {activeTab === "trades" && (
           <>
             <Grid size={{ xs: 6, lg: 2 }}>
-              <FormControl fullWidth sx={{
-                "& .MuiOutlinedInput-root": {
-                  height: 48, // consistent height
-                  alignItems: "center",
-                },
-                "& .MuiOutlinedInput-input": {
-                  padding: "12px 10px", // proper spacing
-                },
-                "& .MuiInputBase-root": {
-                  bgcolor: "none",
-                },
-              }} >
-                <InputLabel sx={{ color: AppColors.TXT_SUB, '&.Mui-focused': { color: AppColors.GOLD_DARK } }}>
+              <FormControl
+                fullWidth
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    height: 48, // consistent height
+                    alignItems: "center",
+                  },
+                  "& .MuiOutlinedInput-input": {
+                    padding: "12px 10px", // proper spacing
+                  },
+                  "& .MuiInputBase-root": {
+                    bgcolor: "none",
+                  },
+                }}
+              >
+                <InputLabel
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    "&.Mui-focused": { color: AppColors.GOLD_DARK },
+                  }}
+                >
                   Status
                 </InputLabel>
                 <Select
                   value={filters.status}
-                  onChange={(e) => handleFilterChange('status', e.target.value)}
+                  onChange={(e) => handleFilterChange("status", e.target.value)}
                   label="Status"
                   sx={{
                     color: AppColors.TXT_MAIN,
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
                       borderColor: AppColors.GOLD_DARK,
                     },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
                       borderColor: AppColors.GOLD_DARK,
                     },
-                    '& .MuiSvgIcon-root': {
+                    "& .MuiSvgIcon-root": {
                       color: AppColors.TXT_SUB,
                     },
                   }}
@@ -379,7 +403,7 @@ const ManageHistoryNLogs = () => {
                 variant="outlined"
                 label="Trading Pair"
                 value={filters.pair}
-                onChange={(e) => handleFilterChange('pair', e.target.value)}
+                onChange={(e) => handleFilterChange("pair", e.target.value)}
                 fullWidth
                 sx={{
                   "& .MuiOutlinedInput-root": {
@@ -395,17 +419,32 @@ const ManageHistoryNLogs = () => {
           </>
         )}
 
-        {activeTab === 'income' && (
+        {activeTab === "income" && (
           <>
             <Grid size={{ xs: 6, lg: 2 }}>
-              <FormControl fullWidth sx={{
-                "& .MuiOutlinedInput-root": { height: 48, alignItems: "center" },
-                "& .MuiOutlinedInput-input": { padding: "12px 10px" },
-              }}>
-                <InputLabel sx={{ color: AppColors.TXT_SUB, '&.Mui-focused': { color: AppColors.GOLD_DARK } }}>
+              <FormControl
+                fullWidth
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    height: 48,
+                    alignItems: "center",
+                  },
+                  "& .MuiOutlinedInput-input": { padding: "12px 10px" },
+                }}
+              >
+                <InputLabel
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    "&.Mui-focused": { color: AppColors.GOLD_DARK },
+                  }}
+                >
                   Income Type
                 </InputLabel>
-                <Select value={filters.type} onChange={(e) => handleFilterChange('type', e.target.value)} label="Income Type">
+                <Select
+                  value={filters.type}
+                  onChange={(e) => handleFilterChange("type", e.target.value)}
+                  label="Income Type"
+                >
                   <MenuItem value="">All Types</MenuItem>
                   <MenuItem value="REFERRAL_BONUS">Referral Bonus</MenuItem>
                   <MenuItem value="LEVEL_INCOME">Level Income</MenuItem>
@@ -414,14 +453,29 @@ const ManageHistoryNLogs = () => {
               </FormControl>
             </Grid>
             <Grid size={{ xs: 6, lg: 2 }}>
-              <FormControl fullWidth sx={{
-                "& .MuiOutlinedInput-root": { height: 48, alignItems: "center" },
-                "& .MuiOutlinedInput-input": { padding: "12px 10px" },
-              }}>
-                <InputLabel sx={{ color: AppColors.TXT_SUB, '&.Mui-focused': { color: AppColors.GOLD_DARK } }}>
+              <FormControl
+                fullWidth
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    height: 48,
+                    alignItems: "center",
+                  },
+                  "& .MuiOutlinedInput-input": { padding: "12px 10px" },
+                }}
+              >
+                <InputLabel
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    "&.Mui-focused": { color: AppColors.GOLD_DARK },
+                  }}
+                >
                   Status
                 </InputLabel>
-                <Select value={filters.status} onChange={(e) => handleFilterChange('status', e.target.value)} label="Status">
+                <Select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange("status", e.target.value)}
+                  label="Status"
+                >
                   <MenuItem value="">All Status</MenuItem>
                   <MenuItem value="CONFIRMED">Confirmed</MenuItem>
                   <MenuItem value="PENDING">Pending</MenuItem>
@@ -432,24 +486,33 @@ const ManageHistoryNLogs = () => {
           </>
         )}
 
-        {(activeTab === 'deposits' || activeTab === 'withdrawals') && (
+        {(activeTab === "deposits" || activeTab === "withdrawals") && (
           <Grid size={{ xs: 6, lg: 2 }}>
-            <FormControl fullWidth sx={{
-              "& .MuiOutlinedInput-root": {
-                height: 48, // consistent height
-                alignItems: "center",
-              },
-              "& .MuiOutlinedInput-input": {
-                padding: "12px 10px", // proper spacing
-              }
-            }}>
-              <InputLabel sx={{ color: AppColors.TXT_SUB, '&.Mui-focused': { color: AppColors.GOLD_DARK } }}>
+            <FormControl
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  height: 48, // consistent height
+                  alignItems: "center",
+                },
+                "& .MuiOutlinedInput-input": {
+                  padding: "12px 10px", // proper spacing
+                },
+              }}
+            >
+              <InputLabel
+                sx={{
+                  color: AppColors.TXT_SUB,
+                  "&.Mui-focused": { color: AppColors.GOLD_DARK },
+                }}
+              >
                 Status
               </InputLabel>
               <Select
                 value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
-                label="Status">
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+                label="Status"
+              >
                 <MenuItem value="">All Status</MenuItem>
                 <MenuItem value="SUCCESS">Success</MenuItem>
                 <MenuItem value="PENDING">Pending</MenuItem>
@@ -459,23 +522,31 @@ const ManageHistoryNLogs = () => {
           </Grid>
         )}
 
-        {activeTab === 'withdrawals' && (
+        {activeTab === "withdrawals" && (
           <Grid size={{ xs: 6, lg: 2 }}>
-            <FormControl fullWidth sx={{
-              "& .MuiOutlinedInput-root": {
-                height: 48, // consistent height
-                alignItems: "center",
-              },
-              "& .MuiOutlinedInput-input": {
-                padding: "12px 10px", // proper spacing
-              },
-            }}>
-              <InputLabel sx={{ color: AppColors.TXT_SUB, '&.Mui-focused': { color: AppColors.GOLD_DARK } }}>
+            <FormControl
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  height: 48, // consistent height
+                  alignItems: "center",
+                },
+                "& .MuiOutlinedInput-input": {
+                  padding: "12px 10px", // proper spacing
+                },
+              }}
+            >
+              <InputLabel
+                sx={{
+                  color: AppColors.TXT_SUB,
+                  "&.Mui-focused": { color: AppColors.GOLD_DARK },
+                }}
+              >
                 Withdrawal Type
               </InputLabel>
               <Select
                 value={filters.type}
-                onChange={(e) => handleFilterChange('type', e.target.value)}
+                onChange={(e) => handleFilterChange("type", e.target.value)}
                 label="Withdrawal Type"
               >
                 <MenuItem value="">All Types</MenuItem>
@@ -490,10 +561,12 @@ const ManageHistoryNLogs = () => {
           <DatePicker
             label="Start Date"
             value={filters.startDate}
-            onChange={(newValue) => setFilters(prev => ({ ...prev, startDate: newValue }))}
+            onChange={(newValue) =>
+              setFilters((prev) => ({ ...prev, startDate: newValue }))
+            }
             slotProps={{ textField: { fullWidth: true } }}
             sx={{
-              width: '100%',
+              width: "100%",
               "& .MuiPickersSectionList-root": {
                 padding: "13px 10px",
               },
@@ -505,10 +578,12 @@ const ManageHistoryNLogs = () => {
           <DatePicker
             label="End Date"
             value={filters.endDate}
-            onChange={(newValue) => setFilters(prev => ({ ...prev, endDate: newValue }))}
+            onChange={(newValue) =>
+              setFilters((prev) => ({ ...prev, endDate: newValue }))
+            }
             slotProps={{ textField: { fullWidth: true } }}
             sx={{
-              width: '100%',
+              width: "100%",
               "& .MuiPickersSectionList-root": {
                 padding: "13px 10px",
               },
@@ -516,14 +591,23 @@ const ManageHistoryNLogs = () => {
           />
         </Grid>
       </Grid>
-      {(filters.startDate || filters.endDate || filters.status || filters.type || filters.pair || filters.userId || filters.uid || filters.email) && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
+      {(filters.startDate ||
+        filters.endDate ||
+        filters.status ||
+        filters.type ||
+        filters.pair ||
+        filters.userId ||
+        filters.uid ||
+        filters.email) && (
+        <Box
+          sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1 }}
+        >
           <Button
-            className='btn-primary'
+            className="btn-primary"
             onClick={handleApplyDateFilter}
             startIcon={<Search />}
             sx={{
-              width: { xs: '100%', lg: 'auto' },
+              width: { xs: "100%", lg: "auto" },
             }}
           >
             Apply Filter
@@ -533,38 +617,73 @@ const ManageHistoryNLogs = () => {
             variant="outlined"
             startIcon={<Clear />}
             sx={{
-              alignSelf: 'flex-end',
+              alignSelf: "flex-end",
               borderColor: AppColors.GOLD_DARK,
               color: AppColors.GOLD_DARK,
-              '&:hover': {
+              "&:hover": {
                 borderColor: AppColors.GOLD_LIGHT,
                 bgcolor: `${AppColors.GOLD_DARK}10`,
               },
-              width: { xs: '100%', lg: 'auto' },
+              width: { xs: "100%", lg: "auto" },
             }}
           >
             Clear Filters
           </Button>
-        </Box>)
-      }
+        </Box>
+      )}
     </Box>
   );
 
+  /** Global index offset for the current page (API uses 1-based `pagination.page`). */
+  const rowSerialBase = (pagination.page - 1) * pagination.limit;
+
   const renderTradeRow = (item, index) => (
-    <TableRow key={item._id || item.id || index} sx={{ '&:hover': { bgcolor: `${AppColors.HLT_LIGHT}` } }}>
-      <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>{item?.user?.fullName || 'N/A'}</TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>{item.pair || 'N/A'}</TableCell>
+    <TableRow
+      key={item._id || item.id || index}
+      sx={{ "&:hover": { bgcolor: `${AppColors.HLT_LIGHT}` } }}
+    >
+      <TableCell
+        align="center"
+        sx={{
+          color: AppColors.TXT_SUB,
+          fontVariantNumeric: "tabular-nums",
+          width: 56,
+          maxWidth: 72,
+        }}
+      >
+        {rowSerialBase + index + 1}
+      </TableCell>
+      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+        {item?.user?.fullName || "N/A"}
+      </TableCell>
+      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+        {item.pair || "N/A"}
+      </TableCell>
       <TableCell>
         <Chip
           size="small"
-          icon={item.direction === 'UP' ? <ArrowUpward sx={{ fontSize: 14 }} /> : item.direction === 'DOWN' ? <ArrowDownward sx={{ fontSize: 14 }} /> : undefined}
-          label={item.direction || '—'}
+          icon={
+            item.direction === "UP" ? (
+              <ArrowUpward sx={{ fontSize: 12 }} />
+            ) : item.direction === "DOWN" ? (
+              <ArrowDownward sx={{ fontSize: 12 }} />
+            ) : undefined
+          }
+          label={item.direction || "—"}
           sx={{
-            fontWeight: 600,
-            bgcolor: item.direction === 'UP' ? `${AppColors.SUCCESS}18` : item.direction === 'DOWN' ? `${AppColors.ERROR}18` : `${AppColors.HLT_NONE}30`,
-            color: item.direction === 'UP' ? AppColors.SUCCESS : item.direction === 'DOWN' ? AppColors.ERROR : AppColors.TXT_SUB,
-            border: `1px solid ${item.direction === 'UP' ? AppColors.SUCCESS : item.direction === 'DOWN' ? AppColors.ERROR : AppColors.HLT_NONE}`,
-            '& .MuiChip-icon': { color: 'inherit' },
+            bgcolor:
+              item.direction === "UP"
+                ? `${AppColors.SUCCESS}18`
+                : item.direction === "DOWN"
+                  ? `${AppColors.ERROR}18`
+                  : `${AppColors.HLT_NONE}30`,
+            color:
+              item.direction === "UP"
+                ? AppColors.SUCCESS
+                : item.direction === "DOWN"
+                  ? AppColors.ERROR
+                  : AppColors.TXT_SUB,
+            "& .MuiChip-icon": { color: "inherit" },
           }}
         />
       </TableCell>
@@ -572,18 +691,29 @@ const ManageHistoryNLogs = () => {
         ${formatAmount(item.grossAmount ?? item.amount)}
       </TableCell>
       <TableCell>{getStatusChip(item.status)}</TableCell>
-      <TableCell sx={{
-        color: item.status === 'WIN' ? AppColors.SUCCESS : item.status === 'LOSS' ? AppColors.ERROR : AppColors.TXT_SUB,
-        fontWeight: 600,
-      }}>
+      <TableCell
+        sx={{
+          color:
+            item.status === "WIN"
+              ? AppColors.SUCCESS
+              : item.status === "LOSS"
+                ? AppColors.ERROR
+                : AppColors.TXT_SUB,
+        }}
+      >
         ${formatAmount(item.payout ?? item.profit ?? 0)}
       </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_SUB, fontSize: '0.8rem' }}>{formatDate(item.startTime || item.createdAt)}</TableCell>
+      <TableCell sx={{ color: AppColors.TXT_SUB, fontSize: "0.8rem" }}>
+        {formatDate(item.startTime || item.createdAt)}
+      </TableCell>
       <TableCell sx={{ width: 48, p: 0 }}>
         <IconButton
           size="small"
           onClick={() => setTradeDetailItem(item)}
-          sx={{ color: AppColors.GOLD_DARK, '&:hover': { bgcolor: `${AppColors.GOLD_DARK}15` } }}
+          sx={{
+            color: AppColors.GOLD_DARK,
+            "&:hover": { bgcolor: `${AppColors.GOLD_DARK}15` },
+          }}
           aria-label="View details"
         >
           <Visibility fontSize="small" />
@@ -593,24 +723,51 @@ const ManageHistoryNLogs = () => {
   );
 
   const getIncomeTypeLabel = (type) => {
-    const labels = { REFERRAL_BONUS: 'Referral Bonus', LEVEL_INCOME: 'Level Income', SALARY_INCOME: 'Salary Income' };
-    return labels[type] || type || '—';
+    const labels = {
+      REFERRAL_BONUS: "Referral Bonus",
+      LEVEL_INCOME: "Level Income",
+      SALARY_INCOME: "Salary Income",
+    };
+    return labels[type] || type || "—";
   };
 
   const renderIncomeRow = (item, index) => (
-    <TableRow key={item._id || item.id || index} sx={{ '&:hover': { bgcolor: `${AppColors.HLT_LIGHT}` } }}>
-      <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>{item?.user?.fullName || 'N/A'}</TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>{getIncomeTypeLabel(item.type)}</TableCell>
+    <TableRow
+      key={item._id || item.id || index}
+      sx={{ "&:hover": { bgcolor: `${AppColors.HLT_LIGHT}` } }}
+    >
+      <TableCell
+        align="center"
+        sx={{
+          color: AppColors.TXT_SUB,
+          fontVariantNumeric: "tabular-nums",
+          width: 56,
+          maxWidth: 72,
+        }}
+      >
+        {rowSerialBase + index + 1}
+      </TableCell>
+      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+        {item?.user?.fullName || "N/A"}
+      </TableCell>
+      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+        {getIncomeTypeLabel(item.type)}
+      </TableCell>
       <TableCell sx={{ color: AppColors.SUCCESS }}>
-        +{formatAmount(item.amount)} {item.currency || 'USDT'}
+        +{formatAmount(item.amount)} {item.currency || "USDT"}
       </TableCell>
       <TableCell>{getStatusChip(item.status)}</TableCell>
-      <TableCell sx={{ color: AppColors.TXT_SUB }}>{formatDate(item.createdAt)}</TableCell>
+      <TableCell sx={{ color: AppColors.TXT_SUB }}>
+        {formatDate(item.createdAt)}
+      </TableCell>
       <TableCell sx={{ width: 48, p: 0 }}>
         <IconButton
           size="small"
           onClick={() => setIncomeDetailItem(item)}
-          sx={{ color: AppColors.GOLD_DARK, '&:hover': { bgcolor: `${AppColors.GOLD_DARK}15` } }}
+          sx={{
+            color: AppColors.GOLD_DARK,
+            "&:hover": { bgcolor: `${AppColors.GOLD_DARK}15` },
+          }}
           aria-label="View details"
         >
           <Visibility fontSize="small" />
@@ -619,51 +776,143 @@ const ManageHistoryNLogs = () => {
     </TableRow>
   );
 
-  const renderDepositRow = (item, index) => (
-    <TableRow key={item._id || item.id || index} sx={{ '&:hover': { bgcolor: `${AppColors.HLT_LIGHT}` } }}>
-      <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>{item?.user?.fullName || 'N/A'}</TableCell>
-      <TableCell sx={{ color: AppColors.GOLD_DARK }}>
-        {formatAmount(item.amount)} {item.currency || 'USDT'}
-      </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_SUB }}>{item.chain || '—'}</TableCell>
-      <TableCell>{getStatusChip(item.status)}</TableCell>
-      <TableCell sx={{ color: AppColors.TXT_SUB, fontSize: '0.8rem' }}>{formatDate(item.createdAt)}</TableCell>
-      <TableCell sx={{ width: 48, p: 0 }}>
-        <IconButton
-          size="small"
-          onClick={() => setDepositDetailItem(item)}
-          sx={{ color: AppColors.GOLD_DARK, '&:hover': { bgcolor: `${AppColors.GOLD_DARK}15` } }}
-          aria-label="View details"
+  const renderDepositRow = (item, index) => {
+    const isAdminCredit = item.walletAddress === "admin-test";
+    return (
+      <TableRow
+        key={item._id || item.id || index}
+        sx={{
+          ...(isAdminCredit && {
+            bgcolor: `${AppColors.GOLD_DARK}10`,
+            borderLeft: `3px solid ${AppColors.GOLD_DARK}`,
+          }),
+          "&:hover": {
+            bgcolor: isAdminCredit
+              ? `${AppColors.GOLD_DARK}18`
+              : `${AppColors.HLT_LIGHT}`,
+          },
+        }}
+      >
+        <TableCell
+          align="center"
+          sx={{
+            color: AppColors.TXT_SUB,
+            fontVariantNumeric: "tabular-nums",
+            width: 56,
+            maxWidth: 72,
+          }}
         >
-          <Visibility fontSize="small" />
-        </IconButton>
-      </TableCell>
-    </TableRow>
-  );
+          {rowSerialBase + index + 1}
+        </TableCell>
+        <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flexWrap: "wrap",
+            }}
+          >
+            {item?.user?.fullName || "N/A"}
+            {isAdminCredit && (
+              <Chip
+                label="Admin credit"
+                size="small"
+                sx={{
+                  height: 22,
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  bgcolor: `${AppColors.GOLD_DARK}22`,
+                  color: AppColors.GOLD_DARK,
+                }}
+              />
+            )}
+          </Box>
+        </TableCell>
+        <TableCell sx={{ color: AppColors.GOLD_DARK }}>
+          {formatAmount(item.amount)} {item.currency || "USDT"}
+        </TableCell>
+        <TableCell sx={{ color: AppColors.TXT_SUB }}>
+          {item.chain || "—"}
+        </TableCell>
+        <TableCell>{getStatusChip(item.status)}</TableCell>
+        <TableCell sx={{ color: AppColors.TXT_SUB, fontSize: "0.8rem" }}>
+          {formatDate(item.createdAt)}
+        </TableCell>
+        <TableCell sx={{ width: 48, p: 0 }}>
+          <IconButton
+            size="small"
+            onClick={() => setDepositDetailItem(item)}
+            sx={{
+              color: AppColors.GOLD_DARK,
+              "&:hover": { bgcolor: `${AppColors.GOLD_DARK}15` },
+            }}
+            aria-label="View details"
+          >
+            <Visibility fontSize="small" />
+          </IconButton>
+        </TableCell>
+      </TableRow>
+    );
+  };
 
   const renderWithdrawalRow = (item, index) => (
     <TableRow key={item.id || index}>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>{item.userId || 'N/A'}</TableCell>
+      <TableCell
+        align="center"
+        sx={{
+          color: AppColors.TXT_SUB,
+          fontVariantNumeric: "tabular-nums",
+          width: 56,
+          maxWidth: 72,
+        }}
+      >
+        {rowSerialBase + index + 1}
+      </TableCell>
+      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+        {item.user?.fullName || "N/A"}
+      </TableCell>
+      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+        {item.user?.UID || "N/A"}
+      </TableCell>
       <TableCell>
-        <Typography sx={{ color: AppColors.ERROR, fontWeight: 600 }}>
+        <Typography sx={{ color: AppColors.ERROR }}>
           -${formatAmount(item.amount)}
         </Typography>
       </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>{item.type || 'N/A'}</TableCell>
+      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+        {item.type || "N/A"}
+      </TableCell>
       <TableCell>
-        <Typography sx={{ color: AppColors.TXT_SUB, fontFamily: 'monospace', fontSize: '0.875rem' }}>
-          {item.toAddress ? `${item.toAddress.slice(0, 8)}...${item.toAddress.slice(-6)}` : 'N/A'}
+        <Typography
+          sx={{
+            color: AppColors.TXT_SUB,
+            fontFamily: "monospace",
+            fontSize: "0.875rem",
+          }}
+        >
+          {item.walletAddress
+            ? `${item.walletAddress.slice(0, 8)}...${item.walletAddress.slice(-6)}`
+            : "N/A"}
         </Typography>
       </TableCell>
       <TableCell>{getStatusChip(item.status)}</TableCell>
-      <TableCell sx={{ color: AppColors.TXT_SUB }}>{formatDate(item.createdAt)}</TableCell>
+      <TableCell sx={{ color: AppColors.TXT_SUB }}>
+        {formatDate(item.createdAt)}
+      </TableCell>
       <TableCell>
         {item.txHash ? (
-          <Typography sx={{ color: AppColors.TXT_SUB, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+          <Typography
+            sx={{
+              color: AppColors.TXT_SUB,
+              fontFamily: "monospace",
+              fontSize: "0.875rem",
+            }}
+          >
             {`${item.txHash.slice(0, 8)}...${item.txHash.slice(-6)}`}
           </Typography>
         ) : (
-          'N/A'
+          "N/A"
         )}
       </TableCell>
     </TableRow>
@@ -671,21 +920,55 @@ const ManageHistoryNLogs = () => {
 
   const renderTableHeaders = () => {
     const headers = {
-      trades: ['User', 'Pair', 'Direction', 'Amount', 'Status', 'Payout', 'Date'],
-      income: ['User', 'Type', 'Amount', 'Status', 'Date'],
-      deposits: ['User', 'Amount', 'Chain', 'Status', 'Date'],
-      withdrawals: ['FullName', 'User ID', 'Amount', 'Type', 'To Address', 'Status', 'Date', 'TX Hash']
+      trades: [
+        "User",
+        "Pair",
+        "Direction",
+        "Amount",
+        "Status",
+        "Payout",
+        "Date",
+      ],
+      income: ["User", "Type", "Amount", "Status", "Date"],
+      deposits: ["User", "Amount", "Chain", "Status", "Date"],
+      withdrawals: [
+        "FullName",
+        "User ID",
+        "Amount",
+        "Type",
+        "To Address",
+        "Status",
+        "Date",
+        "TX Hash",
+      ],
     };
 
     return (
       <TableHead>
         <TableRow>
+          <TableCell
+            align="center"
+            sx={{
+              color: AppColors.TXT_MAIN,
+              fontWeight: 600,
+              width: 56,
+              maxWidth: 72,
+            }}
+          >
+            #
+          </TableCell>
           {headers[activeTab]?.map((header, index) => (
             <TableCell key={index}>{header}</TableCell>
           ))}
-          {activeTab === 'trades' && <TableCell sx={{ width: 48, p: 0 }} align="center" />}
-          {activeTab === 'income' && <TableCell sx={{ width: 48, p: 0 }} align="center" />}
-          {activeTab === 'deposits' && <TableCell sx={{ width: 48, p: 0 }} align="center" />}
+          {activeTab === "trades" && (
+            <TableCell sx={{ width: 48, p: 0 }} align="center" />
+          )}
+          {activeTab === "income" && (
+            <TableCell sx={{ width: 48, p: 0 }} align="center" />
+          )}
+          {activeTab === "deposits" && (
+            <TableCell sx={{ width: 48, p: 0 }} align="center" />
+          )}
         </TableRow>
       </TableHead>
     );
@@ -696,7 +979,7 @@ const ManageHistoryNLogs = () => {
       trades: renderTradeRow,
       income: renderIncomeRow,
       deposits: renderDepositRow,
-      withdrawals: renderWithdrawalRow
+      withdrawals: renderWithdrawalRow,
     };
 
     const renderFunction = renderFunctions[activeTab];
@@ -709,27 +992,30 @@ const ManageHistoryNLogs = () => {
   };
 
   const handlePageChange = (event, newPage) => {
-    setPagination(prev => ({ ...prev, page: newPage + 1 }));
+    setPagination((prev) => ({ ...prev, page: newPage + 1 }));
   };
 
   const handleRowsPerPageChange = (event) => {
     const limit = parseInt(event.target.value, 10);
-    setPagination(prev => ({ ...prev, limit, page: 1 }));
+    setPagination((prev) => ({ ...prev, limit, page: 1 }));
   };
 
-  const tablePaginationColSpan = { trades: 8, income: 6, deposits: 6, withdrawals: 8 }[activeTab] || 8;
+  const tablePaginationColSpan =
+    { trades: 9, income: 7, deposits: 7, withdrawals: 9 }[activeTab] || 9;
 
   return (
     <Box>
       {/* MainHeader */}
       <Box sx={{ mb: { xs: 1, md: 1.5 } }}>
-        <Box sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', md: 'center' },
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: { xs: 1, md: 1.5 }
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: { xs: "flex-start", md: "center" },
+            flexDirection: { xs: "column", md: "row" },
+            gap: { xs: 1, md: 1.5 },
+          }}
+        >
           <Box>
             <Typography
               variant="h4"
@@ -738,9 +1024,9 @@ const ManageHistoryNLogs = () => {
                 color: AppColors.TXT_MAIN,
                 mb: { xs: 0.5, md: 1 },
                 background: `linear-gradient(45deg, ${AppColors.GOLD_DARK}, ${AppColors.GOLD_LIGHT})`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                backgroundClip: "text",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
               }}
             >
               History & Logs Management
@@ -749,13 +1035,20 @@ const ManageHistoryNLogs = () => {
               variant="body1"
               sx={{
                 color: AppColors.TXT_SUB,
-                fontWeight: 400
+                fontWeight: 400,
               }}
             >
               Monitor and analyze all platform activities
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flexWrap: 'wrap' }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: { xs: 1, md: 1.5 },
+              flexWrap: "wrap",
+            }}
+          >
             <Button
               onClick={exportData}
               variant="outlined"
@@ -765,15 +1058,15 @@ const ManageHistoryNLogs = () => {
                 py: { xs: 0.27, md: 0.5 },
                 borderColor: AppColors.GOLD_DARK,
                 color: AppColors.GOLD_DARK,
-                '&:hover': {
+                "&:hover": {
                   borderColor: AppColors.GOLD_LIGHT,
                   color: AppColors.GOLD_LIGHT,
-                  bgcolor: `${AppColors.GOLD_DARK}10`
-                }
+                  bgcolor: `${AppColors.GOLD_DARK}10`,
+                },
               }}
             >
               <Typography variant="body2" sx={{ color: AppColors.GOLD_DARK }}>
-                {exportLoading ? 'Exporting...' : 'Export CSV'}
+                {exportLoading ? "Exporting..." : "Export CSV"}
               </Typography>
             </Button>
             <Paper
@@ -784,15 +1077,18 @@ const ManageHistoryNLogs = () => {
                 px: { xs: 1, md: 1.5 },
                 py: { xs: 0.27, md: 0.5 },
                 borderRadius: 2,
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 gap: { xs: 0.5, md: 1 },
               }}
             >
               <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
                 Total Records
               </Typography>
-              <Typography variant="h6" sx={{ color: AppColors.GOLD_DARK, fontWeight: 600 }}>
+              <Typography
+                variant="h6"
+                sx={{ color: AppColors.GOLD_DARK, fontWeight: 600 }}
+              >
                 {pagination.total}
               </Typography>
             </Paper>
@@ -805,16 +1101,21 @@ const ManageHistoryNLogs = () => {
           backgroundColor: AppColors.BG_CARD,
           border: `1px solid ${AppColors.BG_SECONDARY}`,
           borderRadius: 3,
-          height: '100%',
+          height: "100%",
           background: `linear-gradient(135deg, ${AppColors.BG_CARD} 0%, ${AppColors.BG_SECONDARY} 100%)`,
         }}
       >
-        <Box sx={{ p: { xs: 1, md: 1.5 }, borderBottom: `1px solid ${AppColors.BG_SECONDARY}` }}>
+        <Box
+          sx={{
+            p: { xs: 1, md: 1.5 },
+            borderBottom: `1px solid ${AppColors.BG_SECONDARY}`,
+          }}
+        >
           <Tabs
             value={activeTab}
             onChange={(e, newValue) => {
               setActiveTab(newValue);
-              setPagination(prev => ({ ...prev, page: 1 }));
+              setPagination((prev) => ({ ...prev, page: 1 }));
               setIncomeDetailItem(null);
               setTradeDetailItem(null);
               setDepositDetailItem(null);
@@ -822,21 +1123,21 @@ const ManageHistoryNLogs = () => {
             sx={{
               minHeight: "2.25rem",
               borderBottom: `1px solid ${AppColors.BG_SECONDARY}`,
-              '& .MuiTabs-indicator': {
+              "& .MuiTabs-indicator": {
                 backgroundColor: AppColors.GOLD_DARK,
               },
-              '& .MuiTab-root': {
+              "& .MuiTab-root": {
                 color: AppColors.TXT_SUB,
                 minHeight: "2.25rem",
-                padding: { xs: '8px 8px', md: '10px 10px' },
-                fontSize: { xs: '0.75rem', md: '0.875rem' },
-                textTransform: 'none',
+                padding: { xs: "8px 8px", md: "10px 10px" },
+                fontSize: { xs: "0.75rem", md: "0.875rem" },
+                textTransform: "none",
                 fontWeight: 500,
-                '& .MuiTab-iconWrapper': {
-                  marginRight: '6px',
-                  fontSize: { xs: '1rem', md: '1.125rem' },
+                "& .MuiTab-iconWrapper": {
+                  marginRight: "6px",
+                  fontSize: { xs: "1rem", md: "1.125rem" },
                 },
-                '&.Mui-selected': {
+                "&.Mui-selected": {
                   color: AppColors.GOLD_DARK,
                   fontWeight: 600,
                 },
@@ -856,12 +1157,26 @@ const ManageHistoryNLogs = () => {
           {renderFilters()}
         </Box>
         {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 8 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              py: 8,
+            }}
+          >
             <BTLoader />
           </Box>
         ) : data.length === 0 ? (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <History sx={{ fontSize: 64, color: AppColors.TXT_SUB, mb: 2, opacity: 0.5 }} />
+          <Box sx={{ textAlign: "center", py: 8 }}>
+            <History
+              sx={{
+                fontSize: 64,
+                color: AppColors.TXT_SUB,
+                mb: 2,
+                opacity: 0.5,
+              }}
+            />
             <Typography variant="h6" sx={{ color: AppColors.TXT_MAIN, mb: 1 }}>
               No Data Found
             </Typography>
@@ -871,32 +1186,51 @@ const ManageHistoryNLogs = () => {
           </Box>
         ) : (
           <>
-            {activeTab === 'income' && incomeSummary && (
-              <Box sx={{ px: 2, pt: 1.5, pb: 0 }}>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
-                  <Typography variant="body2" sx={{ color: AppColors.TXT_SUB, fontWeight: 600 }}>Summary:</Typography>
+            {activeTab === "income" && incomeSummary && (
+              <Box sx={{ px: 2, pb: 1 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: 1.5,
+                  }}
+                >
+                  <Typography variant="body2" sx={{ color: AppColors.TXT_SUB }}>
+                    Summary:
+                  </Typography>
                   <Chip
                     label={`Total: ${formatAmount(incomeSummary.totalIncomeAmount)} USDT`}
                     size="small"
-                    sx={{ bgcolor: `${AppColors.GOLD_DARK}20`, color: AppColors.GOLD_DARK, fontWeight: 600 }}
+                    sx={{
+                      bgcolor: `${AppColors.GOLD_DARK}20`,
+                      color: AppColors.GOLD_DARK,
+                    }}
                   />
-                  {['LEVEL_INCOME', 'REFERRAL_BONUS', 'SALARY_INCOME'].map((k) => {
-                    const s = incomeSummary[k];
-                    if (!s || (s.count === 0 && !s.totalAmount)) return null;
-                    return (
-                      <Chip
-                        key={k}
-                        label={`${getIncomeTypeLabel(k)}: ${formatAmount(s.totalAmount || 0)} (${s.count})`}
-                        size="small"
-                        variant="outlined"
-                        sx={{ borderColor: AppColors.HLT_NONE, color: AppColors.TXT_SUB, fontSize: '0.75rem' }}
-                      />
-                    );
-                  })}
+                  {["LEVEL_INCOME", "REFERRAL_BONUS", "SALARY_INCOME"].map(
+                    (k) => {
+                      const s = incomeSummary[k];
+                      if (!s || (s.count === 0 && !s.totalAmount)) return null;
+                      return (
+                        <Chip
+                          key={k}
+                          label={`${getIncomeTypeLabel(k)}: ${formatAmount(s.totalAmount || 0)} (${s.count})`}
+                          size="small"
+                          variant="outlined"
+                          sx={{
+                            borderColor: AppColors.HLT_NONE,
+                            color: AppColors.TXT_SUB,
+                            fontSize: "0.75rem",
+                          }}
+                        />
+                      );
+                    },
+                  )}
                 </Box>
               </Box>
             )}
-            <TableContainer component={Paper}
+            <TableContainer
+              component={Paper}
               sx={{
                 boxShadow: "none",
                 maxHeight: "calc(100vh - 10em)",
@@ -912,13 +1246,15 @@ const ManageHistoryNLogs = () => {
                   minWidth: { xs: "8em", lg: "none" },
                   maxWidth: { xs: "14em", lg: "none" },
                 },
-              }}>
+              }}
+            >
               <Table
                 stickyHeader
                 size="small"
                 sx={{
                   background: `linear-gradient(360deg, ${AppColors.BG_SECONDARY} 0%, ${AppColors.BG_MAIN} 100%)`,
-                }}>
+                }}
+              >
                 {renderTableHeaders()}
                 {renderTableBody()}
                 <TableFooter>
@@ -932,15 +1268,24 @@ const ManageHistoryNLogs = () => {
                       rowsPerPageOptions={[5, 10, 25, 50, 100]}
                       colSpan={tablePaginationColSpan}
                       sx={{
-                        borderBottom: 'none',
+                        borderBottom: "none",
                         color: AppColors.TXT_SUB,
-                        '& .MuiTablePagination-selectIcon': { color: AppColors.GOLD_DARK },
-                        '& .MuiTablePagination-select': { color: AppColors.TXT_MAIN },
-                        '& .MuiTablePagination-displayedRows': { color: AppColors.TXT_MAIN },
-                        '& .MuiIconButton-root': {
+                        "& .MuiTablePagination-selectIcon": {
+                          color: AppColors.GOLD_DARK,
+                        },
+                        "& .MuiTablePagination-select": {
+                          color: AppColors.TXT_MAIN,
+                        },
+                        "& .MuiTablePagination-displayedRows": {
+                          color: AppColors.TXT_MAIN,
+                        },
+                        "& .MuiIconButton-root": {
                           color: AppColors.TXT_SUB,
-                          '&:hover': { bgcolor: `${AppColors.GOLD_DARK}20`, color: AppColors.GOLD_DARK },
-                          '&.Mui-disabled': { color: AppColors.HLT_NONE },
+                          "&:hover": {
+                            bgcolor: `${AppColors.GOLD_DARK}20`,
+                            color: AppColors.GOLD_DARK,
+                          },
+                          "&.Mui-disabled": { color: AppColors.HLT_NONE },
                         },
                       }}
                     />
@@ -966,83 +1311,337 @@ const ManageHistoryNLogs = () => {
           },
         }}
       >
-        <DialogTitle sx={{ color: AppColors.GOLD_DARK, fontWeight: 600, borderBottom: `1px solid ${AppColors.HLT_NONE}40`, pb: 1.5 }}>
+        <DialogTitle
+          sx={{
+            color: AppColors.GOLD_DARK,
+            fontWeight: 600,
+            borderBottom: `1px solid ${AppColors.HLT_NONE}40`,
+            pb: 1.5,
+          }}
+        >
           Trade Details
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           {tradeDetailItem && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>User</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  User
+                </Typography>
                 <Box sx={{ mt: 0.5 }}>
-                  <Typography sx={{ color: AppColors.TXT_MAIN }}>{tradeDetailItem?.user?.fullName || '—'}</Typography>
-                  <Typography sx={{ color: AppColors.TXT_SUB, fontSize: '0.875rem' }}>{tradeDetailItem?.user?.email || '—'}</Typography>
-                  <Typography sx={{ color: AppColors.TXT_SUB, fontSize: '0.8rem', fontFamily: 'monospace' }}>{tradeDetailItem?.user?.UID || '—'}</Typography>
+                  <Typography sx={{ color: AppColors.TXT_MAIN }}>
+                    {tradeDetailItem?.user?.fullName || "—"}
+                  </Typography>
+                  <Typography
+                    sx={{ color: AppColors.TXT_SUB, fontSize: "0.875rem" }}
+                  >
+                    {tradeDetailItem?.user?.email || "—"}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: AppColors.TXT_SUB,
+                      fontSize: "0.8rem",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {tradeDetailItem?.user?.UID || "—"}
+                  </Typography>
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Pair</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>{tradeDetailItem.pair || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Pair
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  {tradeDetailItem.pair || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Direction</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>{tradeDetailItem.direction || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Direction
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  {tradeDetailItem.direction || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Gross Amount</Typography>
-                <Typography sx={{ color: AppColors.GOLD_DARK, fontWeight: 600, mt: 0.5 }}>${formatAmount(tradeDetailItem.grossAmount ?? tradeDetailItem.amount)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Gross Amount
+                </Typography>
+                <Typography
+                  sx={{ color: AppColors.GOLD_DARK, fontWeight: 600, mt: 0.5 }}
+                >
+                  $
+                  {formatAmount(
+                    tradeDetailItem.grossAmount ?? tradeDetailItem.amount,
+                  )}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Fee</Typography>
-                <Typography sx={{ color: AppColors.ERROR, mt: 0.5 }}>${formatAmount(tradeDetailItem.feeAmount)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Fee
+                </Typography>
+                <Typography sx={{ color: AppColors.ERROR, mt: 0.5 }}>
+                  ${formatAmount(tradeDetailItem.feeAmount)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Net Amount</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>${formatAmount(tradeDetailItem.netTradeAmount)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Net Amount
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  ${formatAmount(tradeDetailItem.netTradeAmount)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Payout</Typography>
-                <Typography sx={{ color: tradeDetailItem.status === 'WIN' ? AppColors.SUCCESS : tradeDetailItem.status === 'LOSS' ? AppColors.ERROR : AppColors.TXT_MAIN, fontWeight: 600, mt: 0.5 }}>${formatAmount(tradeDetailItem.payout ?? tradeDetailItem.profit ?? 0)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Payout
+                </Typography>
+                <Typography
+                  sx={{
+                    color:
+                      tradeDetailItem.status === "WIN"
+                        ? AppColors.SUCCESS
+                        : tradeDetailItem.status === "LOSS"
+                          ? AppColors.ERROR
+                          : AppColors.TXT_MAIN,
+                    fontWeight: 600,
+                    mt: 0.5,
+                  }}
+                >
+                  $
+                  {formatAmount(
+                    tradeDetailItem.payout ?? tradeDetailItem.profit ?? 0,
+                  )}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Entry Price</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>${formatAmount(tradeDetailItem.entryPrice)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Entry Price
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  ${formatAmount(tradeDetailItem.entryPrice)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Exit Price</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>${formatAmount(tradeDetailItem.exitPrice)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Exit Price
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  ${formatAmount(tradeDetailItem.exitPrice)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Status</Typography>
-                <Box sx={{ mt: 0.5 }}>{getStatusChip(tradeDetailItem.status)}</Box>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Status
+                </Typography>
+                <Box sx={{ mt: 0.5 }}>
+                  {getStatusChip(tradeDetailItem.status)}
+                </Box>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Start</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontSize: '0.875rem' }}>{formatDate(tradeDetailItem.startTime)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Start
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {formatDate(tradeDetailItem.startTime)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Expiry</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontSize: '0.875rem' }}>{formatDate(tradeDetailItem.expiryTime)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Expiry
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {formatDate(tradeDetailItem.expiryTime)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Created</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontSize: '0.875rem' }}>{formatDate(tradeDetailItem.createdAt)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Created
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {formatDate(tradeDetailItem.createdAt)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Updated</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontSize: '0.875rem' }}>{formatDate(tradeDetailItem.updatedAt)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Updated
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {formatDate(tradeDetailItem.updatedAt)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>ID</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontFamily: 'monospace', fontSize: '0.75rem' }}>{tradeDetailItem._id || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  ID
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontFamily: "monospace",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {tradeDetailItem._id || "—"}
+                </Typography>
               </Grid>
             </Grid>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${AppColors.HLT_NONE}40` }}>
+        <DialogActions
+          sx={{ px: 3, py: 2, borderTop: `1px solid ${AppColors.HLT_NONE}40` }}
+        >
           <Button
             onClick={() => setTradeDetailItem(null)}
-            sx={{ color: AppColors.GOLD_DARK, '&:hover': { bgcolor: `${AppColors.GOLD_DARK}15` } }}
+            sx={{
+              color: AppColors.GOLD_DARK,
+              "&:hover": { bgcolor: `${AppColors.GOLD_DARK}15` },
+            }}
           >
             Close
           </Button>
@@ -1063,67 +1662,261 @@ const ManageHistoryNLogs = () => {
           },
         }}
       >
-        <DialogTitle sx={{ color: AppColors.GOLD_DARK, fontWeight: 600, borderBottom: `1px solid ${AppColors.HLT_NONE}40`, pb: 1.5 }}>
+        <DialogTitle
+          sx={{
+            color: AppColors.GOLD_DARK,
+            fontWeight: 600,
+            borderBottom: `1px solid ${AppColors.HLT_NONE}40`,
+            pb: 1.5,
+          }}
+        >
           Income Details
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           {incomeDetailItem && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>User</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  User
+                </Typography>
                 <Box sx={{ mt: 0.5 }}>
-                  <Typography sx={{ color: AppColors.TXT_MAIN }}>{incomeDetailItem?.user?.fullName || '—'}</Typography>
-                  <Typography sx={{ color: AppColors.TXT_SUB, fontSize: '0.875rem' }}>{incomeDetailItem?.user?.email || '—'}</Typography>
-                  <Typography sx={{ color: AppColors.TXT_SUB, fontSize: '0.8rem', fontFamily: 'monospace' }}>{incomeDetailItem?.user?.UID || '—'}</Typography>
+                  <Typography sx={{ color: AppColors.TXT_MAIN }}>
+                    {incomeDetailItem?.user?.fullName || "—"}
+                  </Typography>
+                  <Typography
+                    sx={{ color: AppColors.TXT_SUB, fontSize: "0.875rem" }}
+                  >
+                    {incomeDetailItem?.user?.email || "—"}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: AppColors.TXT_SUB,
+                      fontSize: "0.8rem",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {incomeDetailItem?.user?.UID || "—"}
+                  </Typography>
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Type</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>{getIncomeTypeLabel(incomeDetailItem.type)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Type
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  {getIncomeTypeLabel(incomeDetailItem.type)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Amount</Typography>
-                <Typography sx={{ color: AppColors.SUCCESS, fontWeight: 600, mt: 0.5 }}>+{formatAmount(incomeDetailItem.amount)} {incomeDetailItem.currency || 'USDT'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Amount
+                </Typography>
+                <Typography
+                  sx={{ color: AppColors.SUCCESS, fontWeight: 600, mt: 0.5 }}
+                >
+                  +{formatAmount(incomeDetailItem.amount)}{" "}
+                  {incomeDetailItem.currency || "USDT"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Chain</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>{incomeDetailItem.chain || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Chain
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  {incomeDetailItem.chain || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Currency</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>{incomeDetailItem.currency || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Currency
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  {incomeDetailItem.currency || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Status</Typography>
-                <Box sx={{ mt: 0.5 }}>{getStatusChip(incomeDetailItem.status)}</Box>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Status
+                </Typography>
+                <Box sx={{ mt: 0.5 }}>
+                  {getStatusChip(incomeDetailItem.status)}
+                </Box>
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Wallet Address</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5, fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>{incomeDetailItem.walletAddress || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Wallet Address
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_MAIN,
+                    mt: 0.5,
+                    fontFamily: "monospace",
+                    fontSize: "0.875rem",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {incomeDetailItem.walletAddress || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Transaction Hash</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5, fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>{incomeDetailItem.txHash || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Transaction Hash
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_MAIN,
+                    mt: 0.5,
+                    fontFamily: "monospace",
+                    fontSize: "0.875rem",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {incomeDetailItem.txHash || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Created</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontSize: '0.875rem' }}>{formatDate(incomeDetailItem.createdAt)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Created
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {formatDate(incomeDetailItem.createdAt)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Updated</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontSize: '0.875rem' }}>{formatDate(incomeDetailItem.updatedAt)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Updated
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {formatDate(incomeDetailItem.updatedAt)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>ID</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontFamily: 'monospace', fontSize: '0.75rem' }}>{incomeDetailItem._id || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  ID
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontFamily: "monospace",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {incomeDetailItem._id || "—"}
+                </Typography>
               </Grid>
             </Grid>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${AppColors.HLT_NONE}40` }}>
+        <DialogActions
+          sx={{ px: 3, py: 2, borderTop: `1px solid ${AppColors.HLT_NONE}40` }}
+        >
           <Button
             onClick={() => setIncomeDetailItem(null)}
-            sx={{ color: AppColors.GOLD_DARK, '&:hover': { bgcolor: `${AppColors.GOLD_DARK}15` } }}
+            sx={{
+              color: AppColors.GOLD_DARK,
+              "&:hover": { bgcolor: `${AppColors.GOLD_DARK}15` },
+            }}
           >
             Close
           </Button>
@@ -1144,67 +1937,281 @@ const ManageHistoryNLogs = () => {
           },
         }}
       >
-        <DialogTitle sx={{ color: AppColors.GOLD_DARK, fontWeight: 600, borderBottom: `1px solid ${AppColors.HLT_NONE}40`, pb: 1.5 }}>
-          Deposit Details
+        <DialogTitle
+          sx={{
+            color: AppColors.GOLD_DARK,
+            fontWeight: 600,
+            borderBottom: `1px solid ${AppColors.HLT_NONE}40`,
+            pb: 1.5,
+          }}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              flexWrap: "wrap",
+            }}
+          >
+            Deposit Details
+            {depositDetailItem?.walletAddress === "admin-test" && (
+              <Chip
+                label="Admin credit"
+                size="small"
+                sx={{
+                  fontWeight: 600,
+                  bgcolor: `${AppColors.GOLD_DARK}22`,
+                  color: AppColors.GOLD_DARK,
+                }}
+              />
+            )}
+          </Box>
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
           {depositDetailItem && (
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>User</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  User
+                </Typography>
                 <Box sx={{ mt: 0.5 }}>
-                  <Typography sx={{ color: AppColors.TXT_MAIN }}>{depositDetailItem?.user?.fullName || '—'}</Typography>
-                  <Typography sx={{ color: AppColors.TXT_SUB, fontSize: '0.875rem' }}>{depositDetailItem?.user?.email || '—'}</Typography>
-                  <Typography sx={{ color: AppColors.TXT_SUB, fontSize: '0.8rem', fontFamily: 'monospace' }}>{depositDetailItem?.user?.UID || '—'}</Typography>
+                  <Typography sx={{ color: AppColors.TXT_MAIN }}>
+                    {depositDetailItem?.user?.fullName || "—"}
+                  </Typography>
+                  <Typography
+                    sx={{ color: AppColors.TXT_SUB, fontSize: "0.875rem" }}
+                  >
+                    {depositDetailItem?.user?.email || "—"}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: AppColors.TXT_SUB,
+                      fontSize: "0.8rem",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {depositDetailItem?.user?.UID || "—"}
+                  </Typography>
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Type</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>{depositDetailItem.type || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Type
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  {depositDetailItem.type || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Amount</Typography>
-                <Typography sx={{ color: AppColors.GOLD_DARK, fontWeight: 600, mt: 0.5 }}>{formatAmount(depositDetailItem.amount)} {depositDetailItem.currency || 'USDT'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Amount
+                </Typography>
+                <Typography
+                  sx={{ color: AppColors.GOLD_DARK, fontWeight: 600, mt: 0.5 }}
+                >
+                  {formatAmount(depositDetailItem.amount)}{" "}
+                  {depositDetailItem.currency || "USDT"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Chain</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>{depositDetailItem.chain || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Chain
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  {depositDetailItem.chain || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Currency</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>{depositDetailItem.currency || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Currency
+                </Typography>
+                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5 }}>
+                  {depositDetailItem.currency || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Status</Typography>
-                <Box sx={{ mt: 0.5 }}>{getStatusChip(depositDetailItem.status)}</Box>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Status
+                </Typography>
+                <Box sx={{ mt: 0.5 }}>
+                  {getStatusChip(depositDetailItem.status)}
+                </Box>
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Wallet Address</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5, fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>{depositDetailItem.walletAddress || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Wallet Address
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_MAIN,
+                    mt: 0.5,
+                    fontFamily: "monospace",
+                    fontSize: "0.875rem",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {depositDetailItem.walletAddress || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Transaction Hash</Typography>
-                <Typography sx={{ color: AppColors.TXT_MAIN, mt: 0.5, fontFamily: 'monospace', fontSize: '0.875rem', wordBreak: 'break-all' }}>{depositDetailItem.txHash || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Transaction Hash
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_MAIN,
+                    mt: 0.5,
+                    fontFamily: "monospace",
+                    fontSize: "0.875rem",
+                    wordBreak: "break-all",
+                  }}
+                >
+                  {depositDetailItem.txHash || "—"}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Created</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontSize: '0.875rem' }}>{formatDate(depositDetailItem.createdAt)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Created
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {formatDate(depositDetailItem.createdAt)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>Updated</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontSize: '0.875rem' }}>{formatDate(depositDetailItem.updatedAt)}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  Updated
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {formatDate(depositDetailItem.updatedAt)}
+                </Typography>
               </Grid>
               <Grid size={{ xs: 12 }}>
-                <Typography variant="caption" sx={{ color: AppColors.TXT_SUB, textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>ID</Typography>
-                <Typography sx={{ color: AppColors.TXT_SUB, mt: 0.5, fontFamily: 'monospace', fontSize: '0.75rem' }}>{depositDetailItem._id || '—'}</Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    fontWeight: 600,
+                  }}
+                >
+                  ID
+                </Typography>
+                <Typography
+                  sx={{
+                    color: AppColors.TXT_SUB,
+                    mt: 0.5,
+                    fontFamily: "monospace",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {depositDetailItem._id || "—"}
+                </Typography>
               </Grid>
             </Grid>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${AppColors.HLT_NONE}40` }}>
+        <DialogActions
+          sx={{ px: 3, py: 2, borderTop: `1px solid ${AppColors.HLT_NONE}40` }}
+        >
           <Button
             onClick={() => setDepositDetailItem(null)}
-            sx={{ color: AppColors.GOLD_DARK, '&:hover': { bgcolor: `${AppColors.GOLD_DARK}15` } }}
+            sx={{
+              color: AppColors.GOLD_DARK,
+              "&:hover": { bgcolor: `${AppColors.GOLD_DARK}15` },
+            }}
           >
             Close
           </Button>
