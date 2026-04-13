@@ -837,7 +837,20 @@ const NetworkManageHistoryNLogs = () => {
         {rowSerialBase + index + 1}
       </TableCell>
       <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
-        {item?.userId?.fullName || "N/A"}
+        <Box sx={{ display: "flex", flexDirection: "column"}}>
+          <Typography variant="body2" >
+            {item?.userId?.fullName || "N/A"}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: AppColors.TXT_SUB,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            UID: {item?.userId?.UID ?? "—"}
+          </Typography>
+        </Box>
       </TableCell>
       <TableCell sx={{ color: AppColors.TXT_MAIN }}>
         {getIncomeTypeLabel(item.type)}
@@ -872,8 +885,7 @@ const NetworkManageHistoryNLogs = () => {
       key={item._id || item.id || index}
       sx={{
         ...(isAdminCredit && {
-          bgcolor: `${AppColors.GOLD_DARK}10`,
-          boxShadow: `inset 3px 0 0 ${AppColors.GOLD_DARK}`,
+          boxShadow: `inset 4px 0 0 ${AppColors.GOLD_DARK}`,
         }),
         "&:hover": {
           bgcolor: isAdminCredit
@@ -895,9 +907,20 @@ const NetworkManageHistoryNLogs = () => {
       </TableCell>
       <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-          <Typography variant="body2" component="span">
-            {item?.user?.fullName || "N/A"}
-          </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25, minWidth: 0 }}>
+            <Typography variant="body2" component="span">
+              {item?.user?.fullName || "N/A"}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: AppColors.TXT_SUB,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              UID: {item?.user?.UID ?? "—"}
+            </Typography>
+          </Box>
           {isAdminCredit && (
             <Chip
               label="Admin credit"
@@ -942,14 +965,12 @@ const NetworkManageHistoryNLogs = () => {
   };
 
   const renderWithdrawalRow = (item, index) => {
-    const userId =
-      typeof item.user === "object"
-        ? item.user?.UID ||
-          item.user?.email ||
-          item.user?.fullName ||
-          item.user?._id ||
-          "N/A"
-        : item.user || "N/A";
+    const userObj = typeof item.user === "object" && item.user !== null;
+    const uidLine = userObj
+      ? item.user?.UID ?? "—"
+      : typeof item.user === "string"
+        ? item.user
+        : "—";
 
     return (
       <TableRow
@@ -972,7 +993,22 @@ const NetworkManageHistoryNLogs = () => {
         >
           {rowSerialBase + index + 1}
         </TableCell>
-        <TableCell sx={{ color: AppColors.TXT_MAIN }}>{userId}</TableCell>
+        <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+            <Typography variant="body2" component="span">
+              {userObj ? item.user?.fullName || "N/A" : "N/A"}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: AppColors.TXT_SUB,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              UID: {uidLine}
+            </Typography>
+          </Box>
+        </TableCell>
         <TableCell>
           <Typography sx={{ color: AppColors.ERROR, fontWeight: 600 }}>
             -${formatAmount(item.amount)}
@@ -1022,7 +1058,7 @@ const NetworkManageHistoryNLogs = () => {
       income: ["User", "Type", "Amount", "Date"],
       deposits: ["User", "Amount", "Chain", "Status", "Date"],
       withdrawals: [
-        "User ID",
+        "User",
         "Amount",
         "Chain",
         "To Address",

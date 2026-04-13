@@ -653,8 +653,21 @@ const ManageHistoryNLogs = () => {
       >
         {rowSerialBase + index + 1}
       </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
-        {item?.user?.fullName || "N/A"}
+      <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+          <Typography variant="body2" component="span">
+            {item?.user?.fullName || "N/A"}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: AppColors.TXT_SUB,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            UID: {item?.user?.UID ?? "—"}
+          </Typography>
+        </Box>
       </TableCell>
       <TableCell sx={{ color: AppColors.TXT_MAIN }}>
         {item.pair || "N/A"}
@@ -747,8 +760,21 @@ const ManageHistoryNLogs = () => {
       >
         {rowSerialBase + index + 1}
       </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
-        {item?.user?.fullName || "N/A"}
+      <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+          <Typography variant="body2" component="span">
+            {item?.user?.fullName || "N/A"}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: AppColors.TXT_SUB,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            UID: {item?.user?.UID ?? "—"}
+          </Typography>
+        </Box>
       </TableCell>
       <TableCell sx={{ color: AppColors.TXT_MAIN }}>
         {getIncomeTypeLabel(item.type)}
@@ -804,7 +830,7 @@ const ManageHistoryNLogs = () => {
         >
           {rowSerialBase + index + 1}
         </TableCell>
-        <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+        <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
           <Box
             sx={{
               display: "flex",
@@ -813,7 +839,20 @@ const ManageHistoryNLogs = () => {
               flexWrap: "wrap",
             }}
           >
-            {item?.user?.fullName || "N/A"}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25, minWidth: 0 }}>
+              <Typography variant="body2" component="span">
+                {item?.user?.fullName || "N/A"}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: AppColors.TXT_SUB,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                UID: {item?.user?.UID ?? "—"}
+              </Typography>
+            </Box>
             {isAdminCredit && (
               <Chip
                 label="Admin credit"
@@ -856,7 +895,15 @@ const ManageHistoryNLogs = () => {
     );
   };
 
-  const renderWithdrawalRow = (item, index) => (
+  const renderWithdrawalRow = (item, index) => {
+    const userObj = typeof item.user === "object" && item.user !== null;
+    const uidLine = userObj
+      ? item.user?.UID ?? "—"
+      : typeof item.user === "string"
+        ? item.user
+        : "—";
+
+    return (
     <TableRow key={item.id || index}>
       <TableCell
         align="center"
@@ -869,11 +916,21 @@ const ManageHistoryNLogs = () => {
       >
         {rowSerialBase + index + 1}
       </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
-        {item.user?.fullName || "N/A"}
-      </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
-        {item.user?.UID || "N/A"}
+      <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+          <Typography variant="body2" component="span">
+            {userObj ? item.user?.fullName || "N/A" : "N/A"}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{
+              color: AppColors.TXT_SUB,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            UID: {uidLine}
+          </Typography>
+        </Box>
       </TableCell>
       <TableCell>
         <Typography sx={{ color: AppColors.ERROR }}>
@@ -916,7 +973,8 @@ const ManageHistoryNLogs = () => {
         )}
       </TableCell>
     </TableRow>
-  );
+    );
+  };
 
   const renderTableHeaders = () => {
     const headers = {
@@ -932,8 +990,7 @@ const ManageHistoryNLogs = () => {
       income: ["User", "Type", "Amount", "Status", "Date"],
       deposits: ["User", "Amount", "Chain", "Status", "Date"],
       withdrawals: [
-        "FullName",
-        "User ID",
+        "User",
         "Amount",
         "Type",
         "To Address",
@@ -1001,7 +1058,7 @@ const ManageHistoryNLogs = () => {
   };
 
   const tablePaginationColSpan =
-    { trades: 9, income: 7, deposits: 7, withdrawals: 9 }[activeTab] || 9;
+    { trades: 9, income: 7, deposits: 7, withdrawals: 8 }[activeTab] || 9;
 
   return (
     <Box>

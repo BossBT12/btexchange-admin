@@ -62,10 +62,15 @@ const tradeService = {
     return response.data;
   },
 
-  // Get all deposit balances for a specific chain
-  getChainBalances: async (chain) => {
+  // Chain fund overview + paginated addresses: /funds/chain/balances?chain=&page=&limit=
+  // Pass a string for chain-only, or { chain, page?, limit? } for pagination.
+  getChainBalances: async (chainOrParams) => {
+    const params =
+      typeof chainOrParams === "string"
+        ? { chain: chainOrParams }
+        : chainOrParams;
     const response = await api.get(`${BASE_URL}/funds/chain/balances`, {
-      params: { chain },
+      params,
     });
     return response.data;
   },

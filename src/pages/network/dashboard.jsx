@@ -428,7 +428,6 @@ const NetworkDashboard = () => {
             </Grid>
           </DashboardCard>
         </Grid>
-
         <Grid size={{ xs: 12, md: 6 }}>
           <DashboardCard title="Incomes" subtitle="Total incomes from all sources">
             <Grid container spacing={2}>
