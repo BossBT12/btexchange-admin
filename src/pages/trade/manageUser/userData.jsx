@@ -208,9 +208,7 @@ const UserData = () => {
 
       if (response.success) {
         const userData = response.data;
-        console.log("userData: ", userData);
         const merged = mergeUserPayload(userData);
-        console.log("merged: ", merged);
         setUserDetails(merged);
       } else {
         showSnackbar("Failed to fetch user details", "error");

@@ -39,6 +39,7 @@ import {
   Visibility,
   Search,
   Clear,
+  OpenInNew,
 } from "@mui/icons-material";
 import networkService from "../../../services/networkService";
 import { AppColors } from "../../../constant/appColors";
@@ -60,7 +61,7 @@ const NetworkManageHistoryNLogs = () => {
     totalPages: 0,
   });
   const [filters, setFilters] = useState({
-    userId: "",
+    search: "",
     incomeType: "",
     chain: "",
     status: "",
@@ -97,7 +98,7 @@ const NetworkManageHistoryNLogs = () => {
       if (activeTab === "income") {
         params = {
           ...params,
-          ...(filters.userId && { userId: filters.userId }),
+          ...(filters.search && { search: filters.search }),
           ...(filters.incomeType && { incomeType: filters.incomeType }),
           ...(appliedDateRange?.startDate && {
             startDate: appliedDateRange.startDate,
@@ -185,7 +186,7 @@ const NetworkManageHistoryNLogs = () => {
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    handleFilterChange("userId", value);
+    handleFilterChange("search", value);
   };
 
   const handleApplyDateFilter = () => {
@@ -202,7 +203,7 @@ const NetworkManageHistoryNLogs = () => {
 
   const clearFilters = () => {
     setFilters({
-      userId: "",
+      search: "",
       incomeType: "",
       chain: "",
       status: "",
@@ -227,6 +228,28 @@ const NetworkManageHistoryNLogs = () => {
     }).format(amount);
   };
 
+  const getTxExplorerUrl = (chain, txHash) => {
+    if (!txHash) return null;
+
+    const normalizedChain = String(chain || "")
+      .trim()
+      .toUpperCase();
+
+    const explorers = {
+      BSC: "https://bscscan.com",
+      BNB: "https://bscscan.com",
+      ETH: "https://etherscan.io",
+      ETHEREUM: "https://etherscan.io",
+      POLYGON: "https://polygonscan.com",
+      MATIC: "https://polygonscan.com",
+      TRX: "https://tronscan.org",
+      TRON: "https://tronscan.org",
+    };
+
+    const baseExplorerUrl = explorers[normalizedChain] || explorers.BSC;
+    return `${baseExplorerUrl}/tx/${txHash}`;
+  };
+
   const exportData = async () => {
     setExportLoading(true);
     try {
@@ -246,7 +269,7 @@ const NetworkManageHistoryNLogs = () => {
                 value !== undefined &&
                 key !== "startDate" &&
                 key !== "endDate" &&
-                key !== "userId",
+                key !== "search",
             ),
           ),
         };
@@ -786,7 +809,7 @@ const NetworkManageHistoryNLogs = () => {
           />
         </Grid>
       </Grid>
-      {(filters.userId ||
+      {(filters.search ||
         filters.incomeType ||
         filters.startDate ||
         filters.endDate) && (
@@ -1978,17 +2001,36 @@ const NetworkManageHistoryNLogs = () => {
                 >
                   Transaction Hash
                 </Typography>
-                <Typography
-                  sx={{
-                    color: AppColors.TXT_MAIN,
-                    mt: 0.5,
-                    fontFamily: "monospace",
-                    fontSize: "0.875rem",
-                    wordBreak: "break-all",
-                  }}
-                >
-                  {depositDetailItem.txHash || "—"}
-                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+                  <Typography
+                    sx={{
+                      color: AppColors.TXT_MAIN,
+                      fontFamily: "monospace",
+                      fontSize: "0.875rem",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {depositDetailItem.txHash || "—"}
+                  </Typography>
+                  {depositDetailItem.txHash && (
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        window.open(
+                          getTxExplorerUrl(depositDetailItem.chain, depositDetailItem.txHash),
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
+                      }
+                      sx={{
+                        color: AppColors.TXT_SUB,
+                        "&:hover": { color: AppColors.GOLD_DARK },
+                      }}
+                    >
+                      <OpenInNew fontSize="small" />
+                    </IconButton>
+                  )}
+                </Box>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography

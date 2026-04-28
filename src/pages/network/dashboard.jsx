@@ -25,16 +25,23 @@ const NetworkDashboard = () => {
   const { showSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
+  const [depositSummary, setDepositSummary] = useState(null);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         setLoading(true);
-        const response = await networkService.getDashboard();
+        const [{ value: response }, { value: depositUserSummary }] = await Promise.allSettled([
+          networkService.getDashboard(),
+          networkService.getDepositUserSummary(),
+        ]);
         if (response.success) {
           setDashboardData(response.data);
         } else {
           showSnackbar("Failed to load dashboard data", "error");
+        }
+        if (depositUserSummary?.success) {
+          setDepositSummary(depositUserSummary.data);
         }
       } catch (error) {
         console.error("Error fetching dashboard:", error);
@@ -80,6 +87,9 @@ const NetworkDashboard = () => {
   }
 
   const { users, investments, wallets, transactions, incomes } = dashboardData;
+  const latestAdminDepositAt = depositSummary?.latestAdminDepositAt
+    ? new Date(depositSummary.latestAdminDepositAt).toLocaleString()
+    : "N/A";
 
   // Calculate percentages and metrics
   const userStats = {
@@ -429,7 +439,70 @@ const NetworkDashboard = () => {
           </DashboardCard>
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <DashboardCard title="Incomes" subtitle="Total incomes from all sources">
+          <DashboardCard
+            title="Admin Deposit Summary"
+            subtitle="Summary of admin deposits to users"
+          >
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 6 }}>
+                <QuickStatItem
+                  label="Total Admin Deposits"
+                  value={depositSummary?.totalAdminDepositCount ?? 0}
+                  color={AppColors.SUCCESS}
+                />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <Box sx={{ textAlign: "center", p: 2 }}>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      color: AppColors.GOLD_DARK,
+                      fontWeight: 700,
+                      mb: 1,
+                    }}
+                  >
+                    $
+                    {(
+                      depositSummary?.totalAdminDepositAmount ?? 0
+                    ).toLocaleString()}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: AppColors.TXT_SUB,
+                      fontSize: "0.75rem",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    Total Admin Amount
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid size={{ xs: 12 }}>
+                <Box sx={{ textAlign: "center", p: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: AppColors.TXT_SUB, mb: 0.5 }}
+                  >
+                    Latest Admin Deposit At
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{ color: AppColors.TXT_MAIN, fontWeight: 600 }}
+                  >
+                    {latestAdminDepositAt}
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </DashboardCard>
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <DashboardCard
+            title="Incomes"
+            subtitle="Total incomes from all sources"
+          >
             <Grid container spacing={2}>
               <Grid size={{ xs: 6 }}>
                 <Box sx={{ textAlign: "center", p: 2 }}>

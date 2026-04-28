@@ -1,6 +1,6 @@
-import networkApi from '../utils/axios2';
+import networkApi from "../utils/axios2";
 
-const BASE_URL = '/admin';
+const BASE_URL = "/admin";
 
 const networkService = {
   // Dashboard
@@ -21,28 +21,39 @@ const networkService = {
   },
 
   updateUserEmail: async (userId, email) => {
-    const response = await networkApi.put(`${BASE_URL}/user/${userId}/email`, { email });
+    const response = await networkApi.put(`${BASE_URL}/user/${userId}/email`, {
+      email,
+    });
     return response.data;
   },
 
   blockUnblockUser: async (userId, data) => {
-    const response = await networkApi.put(`${BASE_URL}/user/${userId}/block-unblock`, data);
+    const response = await networkApi.put(
+      `${BASE_URL}/user/${userId}/block-unblock`,
+      data,
+    );
     return response.data;
   },
 
   // Financial Management
   getIncomeHistory: async (params = {}) => {
-    const response = await networkApi.get(`${BASE_URL}/income-history`, { params });
+    const response = await networkApi.get(`${BASE_URL}/income-history`, {
+      params,
+    });
     return response.data;
   },
 
   getDepositHistory: async (params = {}) => {
-    const response = await networkApi.get(`${BASE_URL}/deposit-history`, { params });
+    const response = await networkApi.get(`${BASE_URL}/deposit-history`, {
+      params,
+    });
     return response.data;
   },
 
   getWithdrawalHistory: async (params = {}) => {
-    const response = await networkApi.get(`${BASE_URL}/withdrawal-history`, { params });
+    const response = await networkApi.get(`${BASE_URL}/withdrawal-history`, {
+      params,
+    });
     return response.data;
   },
 
@@ -53,7 +64,10 @@ const networkService = {
   },
 
   sweepAddress: async (data) => {
-    const response = await networkApi.post(`${BASE_URL}/funds/sweep-address`, data);
+    const response = await networkApi.post(
+      `${BASE_URL}/funds/sweep-address`,
+      data,
+    );
     return response.data;
   },
 
@@ -78,7 +92,10 @@ const networkService = {
   },
   ///user/capital/reduce
   reduceUserCapital: async (body) => {
-    const response = await networkApi.post(`${BASE_URL}/user/capital/reduce`, body);
+    const response = await networkApi.post(
+      `${BASE_URL}/user/capital/reduce`,
+      body,
+    );
     return response.data;
   },
   createTradeHistory: async (body) => {
@@ -88,7 +105,12 @@ const networkService = {
   getTradeHistory: async (params = {}) => {
     const response = await networkApi.get(`${BASE_URL}/trade-data`, { params });
     return response.data;
-  }
+  },
+  //admin/deposit/user/summary
+  getDepositUserSummary: async () => {
+    const response = await networkApi.get(`${BASE_URL}/deposit/user/summary`);
+    return response.data;
+  },
 };
 
 export default networkService;

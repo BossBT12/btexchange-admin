@@ -39,6 +39,7 @@ import {
   History,
   ShowChart,
   Visibility,
+  OpenInNew,
 } from "@mui/icons-material";
 import tradeService from "../../../services/tradeService";
 import { AppColors } from "../../../constant/appColors";
@@ -57,9 +58,7 @@ const ManageHistoryNLogs = () => {
     totalPages: 0,
   });
   const [filters, setFilters] = useState({
-    userId: "",
-    uid: "",
-    email: "",
+    search: "",
     status: "",
     type: "",
     pair: "",
@@ -92,9 +91,7 @@ const ManageHistoryNLogs = () => {
     return {
       page: overrides.page ?? pagination.page,
       limit: overrides.limit ?? pagination.limit,
-      ...(filters.userId && { userId: filters.userId }),
-      ...(filters.uid && { uid: filters.uid }),
-      ...(filters.email && { email: filters.email }),
+      ...(filters.search && { search: filters.search }),
       ...(filters.status && { status: filters.status }),
       ...(filters.type && { type: filters.type }),
       ...(filters.pair && { pair: filters.pair }),
@@ -175,20 +172,12 @@ const ManageHistoryNLogs = () => {
   const handleSearch = (e) => {
     const value = e.target.value;
     setSearchTerm(value);
-    if (value.includes("@")) {
-      handleFilterChange("email", value);
-    } else if (value.match(/^\d+$/)) {
-      handleFilterChange("uid", value);
-    } else {
-      handleFilterChange("userId", value);
-    }
+    handleFilterChange("search", value);
   };
 
   const clearFilters = () => {
     setFilters({
-      userId: "",
-      uid: "",
-      email: "",
+      search: "",
       status: "",
       type: "",
       pair: "",
@@ -211,6 +200,28 @@ const ManageHistoryNLogs = () => {
       minimumFractionDigits: 2,
       maximumFractionDigits: 6,
     }).format(amount);
+  };
+
+  const getTxExplorerUrl = (chain, txHash) => {
+    if (!txHash) return null;
+
+    const normalizedChain = String(chain || "")
+      .trim()
+      .toUpperCase();
+
+    const explorers = {
+      BSC: "https://bscscan.com",
+      BNB: "https://bscscan.com",
+      ETH: "https://etherscan.io",
+      ETHEREUM: "https://etherscan.io",
+      POLYGON: "https://polygonscan.com",
+      MATIC: "https://polygonscan.com",
+      TRX: "https://tronscan.org",
+      TRON: "https://tronscan.org",
+    };
+
+    const baseExplorerUrl = explorers[normalizedChain] || explorers.BSC;
+    return `${baseExplorerUrl}/tx/${txHash}`;
   };
 
   const exportData = async () => {
@@ -330,7 +341,7 @@ const ManageHistoryNLogs = () => {
         <Grid size={{ xs: 12, lg: 4 }}>
           <TextField
             id="outlined-basic"
-            label="Search by User ID, UID, or Email"
+            label="Search by User ID, UID, or Email or Full Name"
             fullWidth
             variant="outlined"
             value={searchTerm}
@@ -596,9 +607,7 @@ const ManageHistoryNLogs = () => {
         filters.status ||
         filters.type ||
         filters.pair ||
-        filters.userId ||
-        filters.uid ||
-        filters.email) && (
+        filters.search) && (
         <Box
           sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1 }}
         >
@@ -839,7 +848,14 @@ const ManageHistoryNLogs = () => {
               flexWrap: "wrap",
             }}
           >
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25, minWidth: 0 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 0.25,
+                minWidth: 0,
+              }}
+            >
               <Typography variant="body2" component="span">
                 {item?.user?.fullName || "N/A"}
               </Typography>
@@ -898,67 +914,49 @@ const ManageHistoryNLogs = () => {
   const renderWithdrawalRow = (item, index) => {
     const userObj = typeof item.user === "object" && item.user !== null;
     const uidLine = userObj
-      ? item.user?.UID ?? "—"
+      ? (item.user?.UID ?? "—")
       : typeof item.user === "string"
         ? item.user
         : "—";
 
     return (
-    <TableRow key={item.id || index}>
-      <TableCell
-        align="center"
-        sx={{
-          color: AppColors.TXT_SUB,
-          fontVariantNumeric: "tabular-nums",
-          width: 56,
-          maxWidth: 72,
-        }}
-      >
-        {rowSerialBase + index + 1}
-      </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
-          <Typography variant="body2" component="span">
-            {userObj ? item.user?.fullName || "N/A" : "N/A"}
-          </Typography>
-          <Typography
-            variant="caption"
-            sx={{
-              color: AppColors.TXT_SUB,
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            UID: {uidLine}
-          </Typography>
-        </Box>
-      </TableCell>
-      <TableCell>
-        <Typography sx={{ color: AppColors.ERROR }}>
-          -${formatAmount(item.amount)}
-        </Typography>
-      </TableCell>
-      <TableCell sx={{ color: AppColors.TXT_MAIN }}>
-        {item.type || "N/A"}
-      </TableCell>
-      <TableCell>
-        <Typography
+      <TableRow key={item.id || index}>
+        <TableCell
+          align="center"
           sx={{
             color: AppColors.TXT_SUB,
-            fontFamily: "monospace",
-            fontSize: "0.875rem",
+            fontVariantNumeric: "tabular-nums",
+            width: 56,
+            maxWidth: 72,
           }}
         >
-          {item.walletAddress
-            ? `${item.walletAddress.slice(0, 8)}...${item.walletAddress.slice(-6)}`
-            : "N/A"}
-        </Typography>
-      </TableCell>
-      <TableCell>{getStatusChip(item.status)}</TableCell>
-      <TableCell sx={{ color: AppColors.TXT_SUB }}>
-        {formatDate(item.createdAt)}
-      </TableCell>
-      <TableCell>
-        {item.txHash ? (
+          {rowSerialBase + index + 1}
+        </TableCell>
+        <TableCell sx={{ color: AppColors.TXT_MAIN, fontWeight: 500 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}>
+            <Typography variant="body2" component="span">
+              {userObj ? item.user?.fullName || "N/A" : "N/A"}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                color: AppColors.TXT_SUB,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              UID: {uidLine}
+            </Typography>
+          </Box>
+        </TableCell>
+        <TableCell>
+          <Typography sx={{ color: AppColors.ERROR }}>
+            -${formatAmount(item.amount)}
+          </Typography>
+        </TableCell>
+        <TableCell sx={{ color: AppColors.TXT_MAIN }}>
+          {item.type || "N/A"}
+        </TableCell>
+        <TableCell>
           <Typography
             sx={{
               color: AppColors.TXT_SUB,
@@ -966,13 +964,31 @@ const ManageHistoryNLogs = () => {
               fontSize: "0.875rem",
             }}
           >
-            {`${item.txHash.slice(0, 8)}...${item.txHash.slice(-6)}`}
+            {item.walletAddress
+              ? `${item.walletAddress.slice(0, 8)}...${item.walletAddress.slice(-6)}`
+              : "N/A"}
           </Typography>
-        ) : (
-          "N/A"
-        )}
-      </TableCell>
-    </TableRow>
+        </TableCell>
+        <TableCell>{getStatusChip(item.status)}</TableCell>
+        <TableCell sx={{ color: AppColors.TXT_SUB }}>
+          {formatDate(item.createdAt)}
+        </TableCell>
+        <TableCell>
+          {item.txHash ? (
+            <Typography
+              sx={{
+                color: AppColors.TXT_SUB,
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+              }}
+            >
+              {`${item.txHash.slice(0, 8)}...${item.txHash.slice(-6)}`}
+            </Typography>
+          ) : (
+            "N/A"
+          )}
+        </TableCell>
+      </TableRow>
     );
   };
 
@@ -1883,17 +1899,36 @@ const ManageHistoryNLogs = () => {
                 >
                   Transaction Hash
                 </Typography>
-                <Typography
-                  sx={{
-                    color: AppColors.TXT_MAIN,
-                    mt: 0.5,
-                    fontFamily: "monospace",
-                    fontSize: "0.875rem",
-                    wordBreak: "break-all",
-                  }}
-                >
-                  {incomeDetailItem.txHash || "—"}
-                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+                  <Typography
+                    sx={{
+                      color: AppColors.TXT_MAIN,
+                      fontFamily: "monospace",
+                      fontSize: "0.875rem",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {incomeDetailItem.txHash || "—"}
+                  </Typography>
+                  {incomeDetailItem.txHash && (
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        window.open(
+                          getTxExplorerUrl(incomeDetailItem.chain, incomeDetailItem.txHash),
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
+                      }
+                      sx={{
+                        color: AppColors.TXT_SUB,
+                        "&:hover": { color: AppColors.GOLD_DARK },
+                      }}
+                    >
+                      <OpenInNew fontSize="small" />
+                    </IconButton>
+                  )}
+                </Box>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography
@@ -2178,17 +2213,36 @@ const ManageHistoryNLogs = () => {
                 >
                   Transaction Hash
                 </Typography>
-                <Typography
-                  sx={{
-                    color: AppColors.TXT_MAIN,
-                    mt: 0.5,
-                    fontFamily: "monospace",
-                    fontSize: "0.875rem",
-                    wordBreak: "break-all",
-                  }}
-                >
-                  {depositDetailItem.txHash || "—"}
-                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 0.5 }}>
+                  <Typography
+                    sx={{
+                      color: AppColors.TXT_MAIN,
+                      fontFamily: "monospace",
+                      fontSize: "0.875rem",
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {depositDetailItem.txHash || "—"}
+                  </Typography>
+                  {depositDetailItem.txHash && (
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        window.open(
+                          getTxExplorerUrl(depositDetailItem.chain, depositDetailItem.txHash),
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
+                      }
+                      sx={{
+                        color: AppColors.TXT_SUB,
+                        "&:hover": { color: AppColors.GOLD_DARK },
+                      }}
+                    >
+                      <OpenInNew fontSize="small" />
+                    </IconButton>
+                  )}
+                </Box>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <Typography

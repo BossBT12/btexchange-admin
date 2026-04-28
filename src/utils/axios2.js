@@ -30,14 +30,14 @@ networkApi.interceptors.response.use(
 
     const exceptRoute = ["/login"];
 
-    if (
-      [401, 403, 500, 502].includes(status) &&
-      !exceptRoute.includes(location.pathname)
-    ) {
-      window.location.replace("/login");
-      localStorage.clear();
-      Cookies.remove("token2");
-    }
+    // if (
+    //   [401, 403, 500, 502].includes(status) &&
+    //   !exceptRoute.includes(location.pathname)
+    // ) {
+    //   window.location.replace("/login");
+    //   localStorage.clear();
+    //   Cookies.remove("token2");
+    // }
     return Promise.reject(error?.response?.data || error);
   },
 );

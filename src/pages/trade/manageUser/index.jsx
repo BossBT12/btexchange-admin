@@ -438,7 +438,10 @@ const ManageUsers = () => {
         );
       }
     } catch (err) {
-      const msg = err?.response?.data?.message || "Failed to update email";
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to update email";
       showSnackbar(msg, "error");
     } finally {
       setEmailSubmitting(false);
