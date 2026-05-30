@@ -46,8 +46,10 @@ import { AppColors } from "../../../constant/appColors";
 import BTLoader from "../../../components/Loader";
 import dayjs from "dayjs";
 import DatePicker from "../../../components/input/datePicker";
+import useSnackbar from "../../../hooks/useSnackbar";
 
 const ManageHistoryNLogs = () => {
+  const { showSnackbar } = useSnackbar();
   const [activeTab, setActiveTab] = useState("trades");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
@@ -158,12 +160,24 @@ const ManageHistoryNLogs = () => {
   };
 
   const handleApplyDateFilter = () => {
+    if (
+      filters.startDate &&
+      filters.endDate &&
+      dayjs(filters.startDate).isAfter(filters.endDate, "day")
+    ) {
+      showSnackbar(
+        "End date should be greater than or equal to start date",
+        "error",
+      );
+      return;
+    }
+
     setAppliedDateRange({
       startDate: filters.startDate
-        ? dayjs(filters.startDate).format("DD-MM-YYYY")
+        ? dayjs(filters.startDate).format("YYYY-MM-DD")
         : null,
       endDate: filters.endDate
-        ? dayjs(filters.endDate).format("DD-MM-YYYY")
+        ? dayjs(filters.endDate).format("YYYY-MM-DD")
         : null,
     });
     setPagination((prev) => ({ ...prev, page: 1 }));
@@ -525,7 +539,7 @@ const ManageHistoryNLogs = () => {
                 label="Status"
               >
                 <MenuItem value="">All Status</MenuItem>
-                <MenuItem value="SUCCESS">Success</MenuItem>
+                <MenuItem value="CONFIRMED">Confirmed</MenuItem>
                 <MenuItem value="PENDING">Pending</MenuItem>
                 <MenuItem value="FAILED">Failed</MenuItem>
               </Select>

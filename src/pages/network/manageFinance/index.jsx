@@ -46,11 +46,13 @@ import { AppColors } from "../../../constant/appColors";
 import BTLoader from "../../../components/Loader";
 import DatePicker from "../../../components/input/datePicker";
 import dayjs from "dayjs";
+import useSnackbar from "../../../hooks/useSnackbar";
 
 /** Deposits with this `walletAddress` are shown as admin credits in Deposits History. */
 const ADMIN_CREDIT_WALLET_ADDRESS = "admin-test";
 
 const NetworkManageHistoryNLogs = () => {
+  const { showSnackbar } = useSnackbar();
   const [activeTab, setActiveTab] = useState("income");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]);
@@ -95,7 +97,26 @@ const NetworkManageHistoryNLogs = () => {
       let response;
       let params = { page: pagination.page, limit: pagination.limit };
 
-      if (activeTab === "income") {
+      // if (activeTab === "income") {
+      //   params = {
+      //     ...params,
+      //     ...(filters.search && { search: filters.search }),
+      //     ...(filters.incomeType && { incomeType: filters.incomeType }),
+      //     ...(appliedDateRange?.startDate && {
+      //       startDate: appliedDateRange.startDate,
+      //     }),
+      //     ...(appliedDateRange?.endDate && {
+      //       endDate: appliedDateRange.endDate,
+      //     }),
+      //   };
+      // } else if (["deposits", "withdrawals"]?.includes(activeTab)) {
+      //   params = {
+      //     ...params,
+      //     ...(filters.chain && { chain: filters.chain }),
+      //     ...(filters.status && { status: filters.status }),
+      //   };
+      // }
+
         params = {
           ...params,
           ...(filters.search && { search: filters.search }),
@@ -106,14 +127,9 @@ const NetworkManageHistoryNLogs = () => {
           ...(appliedDateRange?.endDate && {
             endDate: appliedDateRange.endDate,
           }),
-        };
-      } else if (activeTab === "deposits") {
-        params = {
-          ...params,
           ...(filters.chain && { chain: filters.chain }),
           ...(filters.status && { status: filters.status }),
         };
-      }
 
       switch (activeTab) {
         case "income":
@@ -190,6 +206,18 @@ const NetworkManageHistoryNLogs = () => {
   };
 
   const handleApplyDateFilter = () => {
+    if (
+      filters.startDate &&
+      filters.endDate &&
+      dayjs(filters.startDate).isAfter(filters.endDate, "day")
+    ) {
+      showSnackbar(
+        "End date should be greater than or equal to start date",
+        "error",
+      );
+      return;
+    }
+
     setAppliedDateRange({
       startDate: filters.startDate
         ? dayjs(filters.startDate).format("YYYY-MM-DD")
@@ -774,7 +802,7 @@ const NetworkManageHistoryNLogs = () => {
                 label="Status"
               >
                 <MenuItem value="">All Status</MenuItem>
-                <MenuItem value="SUCCESS">Success</MenuItem>
+                {/* <MenuItem value="SUCCESS">Success</MenuItem> */}
                 <MenuItem value="CONFIRMED">Confirmed</MenuItem>
                 <MenuItem value="PENDING">Pending</MenuItem>
                 <MenuItem value="FAILED">Failed</MenuItem>
@@ -809,10 +837,12 @@ const NetworkManageHistoryNLogs = () => {
           />
         </Grid>
       </Grid>
-      {(filters.search ||
-        filters.incomeType ||
-        filters.startDate ||
-        filters.endDate) && (
+      {(filters?.search ||
+        filters?.incomeType ||
+        filters?.chain ||
+        filters?.status ||
+        filters?.startDate ||
+        filters?.endDate) && (
         <Box
           sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 1.5 }}
         >
